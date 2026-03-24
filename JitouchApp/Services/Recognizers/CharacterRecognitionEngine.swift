@@ -129,31 +129,23 @@ struct CharacterRecognitionEngine {
     }
 
     func bestMatch(for geometry: CharacterStrokeGeometry) -> RecognizedCharacter? {
-        var bestCandidate: ScoredTemplate?
-
-        for candidate in candidates where candidate.isComplete {
-            if candidate.template.value == "H", bestCandidate?.template.value == "B" {
-                continue
-            }
-
-            if candidate.template.value == "J", bestCandidate?.template.value == "Y" {
-                continue
-            }
-
-            guard geometry.accepts(candidate.template.value) else {
-                continue
-            }
-
-            if bestCandidate == nil || candidate.score > bestCandidate?.score ?? -.infinity {
-                bestCandidate = candidate
-            }
+        guard let bestCandidate = bestCandidate(for: geometry) else {
+            return nil
         }
 
-        guard let bestCandidate, bestCandidate.score >= 0 else {
+        guard bestCandidate.score >= 0 else {
             return nil
         }
 
         return RecognizedCharacter(value: bestCandidate.template.value, score: bestCandidate.score)
+    }
+
+    func bestGuess(for geometry: CharacterStrokeGeometry) -> String? {
+        guard let bestCandidate = bestCandidate(for: geometry) else {
+            return nil
+        }
+
+        return bestCandidate.score >= 0 ? bestCandidate.template.value : nil
     }
 
     private func score(
@@ -198,6 +190,30 @@ struct CharacterRecognitionEngine {
     private static func gaussianValue(at x: Double) -> Double {
         let coefficient = 1 / sqrt(2 * .pi * gaussianSigma * gaussianSigma)
         return coefficient * exp(-(x * x) / (2 * gaussianSigma * gaussianSigma))
+    }
+
+    private func bestCandidate(for geometry: CharacterStrokeGeometry) -> ScoredTemplate? {
+        var bestCandidate: ScoredTemplate?
+
+        for candidate in candidates where candidate.isComplete {
+            if candidate.template.value == "H", bestCandidate?.template.value == "B" {
+                continue
+            }
+
+            if candidate.template.value == "J", bestCandidate?.template.value == "Y" {
+                continue
+            }
+
+            guard geometry.accepts(candidate.template.value) else {
+                continue
+            }
+
+            if bestCandidate == nil || candidate.score > bestCandidate?.score ?? -.infinity {
+                bestCandidate = candidate
+            }
+        }
+
+        return bestCandidate
     }
 }
 

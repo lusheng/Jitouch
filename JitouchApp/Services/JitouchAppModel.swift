@@ -10,6 +10,7 @@ final class JitouchAppModel {
     let eventTapManager: EventTapManager
     let gestureEngine: GestureEngine
     let commandExecutor: CommandExecutor
+    let magicMouseCharacterRecognitionService: MagicMouseCharacterRecognitionService
 
     private(set) var settings: JitouchSettings
     private(set) var lastReloadDate: Date?
@@ -23,7 +24,8 @@ final class JitouchAppModel {
         deviceManager: DeviceManager = DeviceManager(),
         eventTapManager: EventTapManager = EventTapManager(),
         gestureEngine: GestureEngine = GestureEngine(),
-        commandExecutor: CommandExecutor = CommandExecutor()
+        commandExecutor: CommandExecutor = CommandExecutor(),
+        magicMouseCharacterRecognitionService: MagicMouseCharacterRecognitionService = MagicMouseCharacterRecognitionService()
     ) {
         self.settingsStore = settingsStore
         self.accessibilityPermissionService = accessibilityPermissionService
@@ -31,10 +33,15 @@ final class JitouchAppModel {
         self.eventTapManager = eventTapManager
         self.gestureEngine = gestureEngine
         self.commandExecutor = commandExecutor
+        self.magicMouseCharacterRecognitionService = magicMouseCharacterRecognitionService
         self.settings = settingsStore.load()
         self.legacyPreferencesFound = settingsStore.preferencesFileExists
 
         commandExecutor.installEventTapHandler(on: eventTapManager)
+        magicMouseCharacterRecognitionService.installEventTapHandler(on: eventTapManager)
+        magicMouseCharacterRecognitionService.onRecognizedCharacter = { [weak self] character in
+            self?.gestureEngine.publish(.characterRecognized(character))
+        }
 
         gestureEngine.onGestureEvent = { [weak self] event in
             guard let self else { return }
@@ -44,6 +51,7 @@ final class JitouchAppModel {
         }
 
         gestureEngine.updateSettings(settings)
+        magicMouseCharacterRecognitionService.updateSettings(settings)
         startRuntimeServices()
     }
 
@@ -83,6 +91,7 @@ final class JitouchAppModel {
         lastReloadDate = .now
         lastError = nil
         gestureEngine.updateSettings(settings)
+        magicMouseCharacterRecognitionService.updateSettings(settings)
         deviceManager.refreshDevicesNow()
     }
 
@@ -96,6 +105,7 @@ final class JitouchAppModel {
         if !isEnabled {
             gestureEngine.reset()
             commandExecutor.cancelTransientState()
+            magicMouseCharacterRecognitionService.reset()
         }
         persist()
     }
@@ -132,8 +142,23 @@ final class JitouchAppModel {
         persist()
     }
 
+    func setOneFingerDrawingEnabled(_ isEnabled: Bool) {
+        settings.oneFingerDrawingEnabled = isEnabled
+        persist()
+    }
+
     func setCharacterRecognitionIndexRingDistance(_ distance: Double) {
         settings.characterRecognitionIndexRingDistance = distance
+        persist()
+    }
+
+    func setMagicMouseCharacterRecognitionEnabled(_ isEnabled: Bool) {
+        settings.magicMouseCharacterRecognitionEnabled = isEnabled
+        persist()
+    }
+
+    func setCharacterRecognitionMouseButton(_ button: Int) {
+        settings.characterRecognitionMouseButton = button
         persist()
     }
 
@@ -152,6 +177,7 @@ final class JitouchAppModel {
 
     func stopRuntimeServices() {
         commandExecutor.cancelTransientState()
+        magicMouseCharacterRecognitionService.reset()
         deviceManager.stop()
         eventTapManager.stop()
     }
@@ -162,6 +188,7 @@ final class JitouchAppModel {
             legacyPreferencesFound = settingsStore.preferencesFileExists
             lastError = nil
             gestureEngine.updateSettings(settings)
+            magicMouseCharacterRecognitionService.updateSettings(settings)
         } catch {
             lastError = "Failed to save settings: \(error.localizedDescription)"
         }

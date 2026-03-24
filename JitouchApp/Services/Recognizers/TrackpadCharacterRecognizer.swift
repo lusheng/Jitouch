@@ -14,34 +14,56 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
     private let minimumFingerTravelSquared: CGFloat = 0.003
     private let distanceStabilityThreshold: CGFloat = 0.13
     private let minimumValidatedSegments = 5
+    private let hintWaitTime: Double = 0.3
 
+    private let context: TrackpadGestureContext
+    private let overlay = CharacterRecognitionOverlayController()
     private var session: TrackpadCharacterSession?
+
+    init(context: TrackpadGestureContext) {
+        self.context = context
+    }
 
     func processFrame(_ frame: TouchFrame) -> [GestureEvent] {
         guard frame.deviceType == .trackpad else { return [] }
 
         if !isEnabled {
-            session = nil
+            reset()
+            return []
+        }
+
+        if let currentMode = context.currentCharacterRecognitionMode, currentMode != .twoFinger {
+            reset()
             return []
         }
 
         let touches = frame.activeTouches
         if var currentSession = session {
-            let events = update(session: &currentSession, with: touches)
+            let events = update(session: &currentSession, with: touches, timestamp: frame.timestamp)
             session = currentSession.isActive ? currentSession : nil
+            if session == nil {
+                context.endCharacterRecognition(.twoFinger)
+            }
             return events
         }
 
-        guard shouldStartRecognition(with: touches) else {
+        guard !context.isCharacterRecognitionActive, shouldStartRecognition(with: touches) else {
+            return []
+        }
+
+        guard context.beginCharacterRecognition(.twoFinger) else {
             return []
         }
 
         session = TrackpadCharacterSession(touches: touches)
+        overlay.prepareTrackpadPath(at: session?.firstNormalizedPoint ?? .zero)
         return []
     }
 
     func reset() {
         session = nil
+        context.endCharacterRecognition(.twoFinger)
+        overlay.hide()
     }
 
     func updateSettings(_ settings: JitouchSettings) {
@@ -73,7 +95,11 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
         return true
     }
 
-    private func update(session: inout TrackpadCharacterSession, with touches: [TouchPoint]) -> [GestureEvent] {
+    private func update(
+        session: inout TrackpadCharacterSession,
+        with touches: [TouchPoint],
+        timestamp: Double
+    ) -> [GestureEvent] {
         guard touches.count == 2 else {
             return finish(session: &session, cancelled: touches.count == 3)
         }
@@ -81,13 +107,18 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
         let ids = Set(touches.map(\.id))
         guard ids == session.touchIDs else {
             session.isActive = false
+            overlay.hide()
             return []
         }
 
         let midpoint = center(of: touches)
+        let hint = session.resolveHint(at: timestamp)
         guard squaredDistance(session.lastPoint, midpoint) > minimumPointTravelSquared else {
             if session.engine.isCancelled {
                 session.isActive = false
+                overlay.hide()
+            } else if session.isValidated {
+                overlay.updateTrackpadPath(midpoint, hint: hint)
             }
             return []
         }
@@ -97,6 +128,7 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
         session.lastPoint = midpoint
         session.expandBounds(with: midpoint)
         session.segmentCount += 1
+        session.queueHintRefresh(after: timestamp + hintWaitTime)
 
         if !session.isValidated, session.segmentCount >= minimumValidatedSegments {
             let sortedInitialTouches = session.initialTouchMap.values.sorted { $0.x < $1.x }
@@ -111,21 +143,27 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
                 abs(startDistanceSquared - currentDistanceSquared) < distanceStabilityThreshold
             {
                 session.isValidated = true
+                overlay.reveal()
             } else {
                 session.isActive = false
+                overlay.hide()
                 return []
             }
         }
 
         if session.engine.isCancelled {
             session.isActive = false
+            overlay.hide()
+            return []
         }
 
+        overlay.updateTrackpadPath(midpoint, hint: session.resolveHint(at: timestamp))
         return []
     }
 
     private func finish(session: inout TrackpadCharacterSession, cancelled: Bool) -> [GestureEvent] {
         defer { session.isActive = false }
+        defer { overlay.hide() }
 
         guard !cancelled, session.isValidated else {
             return []
@@ -178,6 +216,7 @@ private struct TrackpadCharacterSession {
     let touchIDs: Set<Int>
     let initialTouchMap: [Int: CGPoint]
     let firstPoint: CGPoint
+    let firstNormalizedPoint: CGPoint
     var lastPoint: CGPoint
     var top: CGFloat
     var bottom: CGFloat
@@ -187,6 +226,8 @@ private struct TrackpadCharacterSession {
     var isValidated = false
     var isActive = true
     var engine = CharacterRecognitionEngine()
+    private var pendingHintTimestamp: Double?
+    private var displayedHint: String?
 
     init(touches: [TouchPoint]) {
         let firstPoint = CGPoint(
@@ -197,6 +238,7 @@ private struct TrackpadCharacterSession {
         self.touchIDs = Set(touches.map(\.id))
         self.initialTouchMap = Dictionary(uniqueKeysWithValues: touches.map { ($0.id, $0.position) })
         self.firstPoint = firstPoint
+        self.firstNormalizedPoint = firstPoint
         self.lastPoint = firstPoint
         self.top = firstPoint.y
         self.bottom = firstPoint.y
@@ -204,10 +246,34 @@ private struct TrackpadCharacterSession {
         self.right = firstPoint.x
     }
 
+    mutating func queueHintRefresh(after timestamp: Double) {
+        pendingHintTimestamp = timestamp
+        displayedHint = nil
+    }
+
+    mutating func resolveHint(at timestamp: Double) -> String? {
+        if let pendingHintTimestamp, timestamp >= pendingHintTimestamp {
+            displayedHint = engine.bestGuess(for: geometry)
+            self.pendingHintTimestamp = nil
+        }
+        return displayedHint
+    }
+
     mutating func expandBounds(with point: CGPoint) {
         top = max(top, point.y)
         bottom = min(bottom, point.y)
         left = min(left, point.x)
         right = max(right, point.x)
+    }
+
+    private var geometry: CharacterStrokeGeometry {
+        CharacterStrokeGeometry(
+            start: firstPoint,
+            end: lastPoint,
+            top: top,
+            bottom: bottom,
+            left: left,
+            right: right
+        )
     }
 }

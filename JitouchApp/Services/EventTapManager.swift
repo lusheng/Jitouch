@@ -2,6 +2,8 @@ import ApplicationServices
 import Foundation
 import Observation
 
+typealias MouseEventHandler = @Sendable (CGEvent, CGEventType) -> CGEvent?
+
 enum EventTapError: LocalizedError {
     case accessibilityNotGranted
     case tapCreationFailed
@@ -25,14 +27,10 @@ final class EventTapManager {
     private(set) var lastObservedEventType: CGEventType?
     private(set) var lastError: String?
 
-    var onMouseEvent: ((CGEvent, CGEventType) -> CGEvent?)? {
-        didSet {
-            activeMouseEventHandler = onMouseEvent
-        }
-    }
-
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    private var mouseEventHandlers: [UUID: MouseEventHandler] = [:]
+    private var mouseEventHandlerOrder: [UUID] = []
 
     var statusText: String {
         if isRunning {
@@ -68,7 +66,7 @@ final class EventTapManager {
         self.eventTap = eventTap
         self.runLoopSource = runLoopSource
         activeEventTapManager = self
-        activeMouseEventHandler = onMouseEvent
+        synchronizeActiveHandlers()
         isRunning = true
         lastError = nil
     }
@@ -84,7 +82,7 @@ final class EventTapManager {
             self.runLoopSource = nil
         }
         isRunning = false
-        activeMouseEventHandler = nil
+        synchronizeActiveHandlers()
         if activeEventTapManager === self {
             activeEventTapManager = nil
         }
@@ -111,6 +109,21 @@ final class EventTapManager {
         lastError = nil
     }
 
+    @discardableResult
+    func addMouseEventHandler(_ handler: @escaping MouseEventHandler) -> UUID {
+        let id = UUID()
+        mouseEventHandlers[id] = handler
+        mouseEventHandlerOrder.append(id)
+        synchronizeActiveHandlers()
+        return id
+    }
+
+    func removeMouseEventHandler(_ id: UUID) {
+        mouseEventHandlers.removeValue(forKey: id)
+        mouseEventHandlerOrder.removeAll { $0 == id }
+        synchronizeActiveHandlers()
+    }
+
     private var eventMask: CGEventMask {
         [
             CGEventType.scrollWheel,
@@ -128,10 +141,17 @@ final class EventTapManager {
             mask |= CGEventMask(1) << type.rawValue
         }
     }
+
+    private func synchronizeActiveHandlers() {
+        activeMouseEventHandlersLock.lock()
+        activeMouseEventHandlers = mouseEventHandlerOrder.compactMap { mouseEventHandlers[$0] }
+        activeMouseEventHandlersLock.unlock()
+    }
 }
 
 nonisolated(unsafe) private var activeEventTapManager: EventTapManager?
-nonisolated(unsafe) private var activeMouseEventHandler: ((CGEvent, CGEventType) -> CGEvent?)?
+private let activeMouseEventHandlersLock = NSLock()
+nonisolated(unsafe) private var activeMouseEventHandlers: [MouseEventHandler] = []
 
 private func jitouchEventTapCallback(
     proxy: CGEventTapProxy,
@@ -150,9 +170,21 @@ private func jitouchEventTapCallback(
         activeEventTapManager?.recordObservedEvent(type: type)
     }
 
-    guard let forwardedEvent = activeMouseEventHandler?(event, type) else {
+    activeMouseEventHandlersLock.lock()
+    let handlers = activeMouseEventHandlers
+    activeMouseEventHandlersLock.unlock()
+
+    var currentEvent: CGEvent? = event
+    for handler in handlers {
+        guard let forwardedEvent = currentEvent else {
+            return nil
+        }
+        currentEvent = handler(forwardedEvent, type)
+    }
+
+    guard let currentEvent else {
         return nil
     }
 
-    return Unmanaged.passUnretained(forwardedEvent)
+    return Unmanaged.passUnretained(currentEvent)
 }

@@ -26,10 +26,14 @@ final class CommandExecutor {
     private var savedWindowFrames: [pid_t: CGRect] = [:]
     private var moveResizeSession: MoveResizeSession?
     private var isThumbMiddleClickHeld = false
+    private var mouseEventHandlerID: UUID?
 
     func installEventTapHandler(on eventTapManager: EventTapManager) {
         activeMoveResizeExecutor = self
-        eventTapManager.onMouseEvent = jitouchCommandExecutorMouseEventHandler
+        if let mouseEventHandlerID {
+            eventTapManager.removeMouseEventHandler(mouseEventHandlerID)
+        }
+        mouseEventHandlerID = eventTapManager.addMouseEventHandler(jitouchCommandExecutorMouseEventHandler)
     }
 
     func cancelTransientState() {
@@ -346,6 +350,7 @@ final class CommandExecutor {
         let event = CGEvent(mouseEventSource: nil, mouseType: eventType, mouseCursorPosition: location, mouseButton: button)
         event?.flags = flags
         event?.setIntegerValueField(.mouseEventButtonNumber, value: buttonNumber)
+        event?.setIntegerValueField(.eventSourceUserData, value: jitouchSyntheticMouseEventUserData)
         event?.post(tap: .cghidEventTap)
     }
 

@@ -6,7 +6,9 @@ final class GestureEngine {
     var onGestureEvent: ((GestureEvent) -> Void)?
     private(set) var recentEvents: [GestureEvent] = []
 
-    private var trackpadRecognizers: [any GestureRecognizer]
+    private let trackpadContext: TrackpadGestureContext
+    private var trackpadCharacterRecognizers: [any GestureRecognizer]
+    private var trackpadGestureRecognizers: [any GestureRecognizer]
     private var mouseRecognizers: [any GestureRecognizer]
 
     init(
@@ -14,28 +16,51 @@ final class GestureEngine {
         mouseRecognizers: [any GestureRecognizer]? = nil
     ) {
         let trackpadContext = TrackpadGestureContext()
-        self.trackpadRecognizers = trackpadRecognizers ?? [
+        self.trackpadContext = trackpadContext
+        self.trackpadCharacterRecognizers = [
+            TrackpadCharacterRecognizer(context: trackpadContext),
+            TrackpadOneFingerCharacterRecognizer(context: trackpadContext),
+        ]
+        self.trackpadGestureRecognizers = trackpadRecognizers ?? [
             TrackpadMoveResizeRecognizer(),
             TrackpadTabSwitchRecognizer(context: trackpadContext),
             TrackpadTapRecognizer(context: trackpadContext),
             TrackpadFixFingerRecognizer(),
             TrackpadSwipeRecognizer(),
             TrackpadPinchRecognizer(),
-            TrackpadCharacterRecognizer(),
         ]
         self.mouseRecognizers = mouseRecognizers ?? [
             MagicMouseRecognizer(),
-            PlaceholderGestureRecognizer(name: "CharacterRecognizer(magicMouse)"),
         ]
     }
 
     var recognizerCount: Int {
-        trackpadRecognizers.count + mouseRecognizers.count
+        trackpadCharacterRecognizers.count + trackpadGestureRecognizers.count + mouseRecognizers.count
     }
 
     func handleTouchFrame(_ frame: TouchFrame) {
-        let recognizers = frame.deviceType == .trackpad ? trackpadRecognizers : mouseRecognizers
-        for recognizer in recognizers where recognizer.isEnabled {
+        if frame.deviceType == .trackpad {
+            for recognizer in trackpadCharacterRecognizers where recognizer.isEnabled {
+                for event in recognizer.processFrame(frame) {
+                    append(event)
+                    onGestureEvent?(event)
+                }
+            }
+
+            guard !trackpadContext.isCharacterRecognitionActive else {
+                return
+            }
+
+            for recognizer in trackpadGestureRecognizers where recognizer.isEnabled {
+                for event in recognizer.processFrame(frame) {
+                    append(event)
+                    onGestureEvent?(event)
+                }
+            }
+            return
+        }
+
+        for recognizer in mouseRecognizers where recognizer.isEnabled {
             for event in recognizer.processFrame(frame) {
                 append(event)
                 onGestureEvent?(event)
@@ -44,14 +69,22 @@ final class GestureEngine {
     }
 
     func reset() {
-        trackpadRecognizers.forEach { $0.reset() }
+        trackpadCharacterRecognizers.forEach { $0.reset() }
+        trackpadGestureRecognizers.forEach { $0.reset() }
         mouseRecognizers.forEach { $0.reset() }
+        trackpadContext.endCharacterRecognition()
         recentEvents.removeAll()
     }
 
     func updateSettings(_ settings: JitouchSettings) {
-        trackpadRecognizers.forEach { $0.updateSettings(settings) }
+        trackpadCharacterRecognizers.forEach { $0.updateSettings(settings) }
+        trackpadGestureRecognizers.forEach { $0.updateSettings(settings) }
         mouseRecognizers.forEach { $0.updateSettings(settings) }
+    }
+
+    func publish(_ event: GestureEvent) {
+        append(event)
+        onGestureEvent?(event)
     }
 
     private func append(_ event: GestureEvent) {

@@ -55,10 +55,31 @@ struct SettingsRootView: View {
         )
     }
 
+    private var oneFingerDrawingEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { appModel.settings.oneFingerDrawingEnabled },
+            set: { appModel.setOneFingerDrawingEnabled($0) }
+        )
+    }
+
     private var characterRecognitionDistanceBinding: Binding<Double> {
         Binding(
             get: { appModel.settings.characterRecognitionIndexRingDistance },
             set: { appModel.setCharacterRecognitionIndexRingDistance($0) }
+        )
+    }
+
+    private var magicMouseCharacterRecognitionEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { appModel.settings.magicMouseCharacterRecognitionEnabled },
+            set: { appModel.setMagicMouseCharacterRecognitionEnabled($0) }
+        )
+    }
+
+    private var characterRecognitionMouseButtonBinding: Binding<Int> {
+        Binding(
+            get: { appModel.settings.characterRecognitionMouseButton },
+            set: { appModel.setCharacterRecognitionMouseButton($0) }
         )
     }
 
@@ -221,8 +242,11 @@ struct SettingsRootView: View {
         GroupBox("Character Recognition") {
             VStack(alignment: .leading, spacing: 14) {
                 Toggle("Enable Trackpad Character Recognition", isOn: trackpadCharacterRecognitionEnabledBinding)
+                Toggle("Enable One-Finger Drawing", isOn: oneFingerDrawingEnabledBinding)
+                    .disabled(!trackpadCharacterRecognitionEnabledBinding.wrappedValue)
                 Toggle("Enable Two-Finger Drawing", isOn: twoFingerDrawingEnabledBinding)
                     .disabled(!trackpadCharacterRecognitionEnabledBinding.wrappedValue)
+                Toggle("Enable Magic Mouse Character Recognition", isOn: magicMouseCharacterRecognitionEnabledBinding)
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
@@ -234,7 +258,14 @@ struct SettingsRootView: View {
                     Slider(value: characterRecognitionDistanceBinding, in: 0.18 ... 0.50)
                 }
 
-                Text("The current Swift migration supports two-finger trackpad drawing first. One-finger trackpad drawing and Magic Mouse character recognition are still pending.")
+                Picker("Mouse Recognition Button", selection: characterRecognitionMouseButtonBinding) {
+                    Text("Middle Click").tag(0)
+                    Text("Right Click").tag(1)
+                }
+                .pickerStyle(.segmented)
+                .disabled(!magicMouseCharacterRecognitionEnabledBinding.wrappedValue)
+
+                Text("Trackpad one-finger and two-finger drawing, plus Magic Mouse drag-to-character, are now wired up in Swift. Character overlay timing is much closer to the legacy build, but threshold calibration still needs real-device tuning.")
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -247,7 +278,7 @@ struct SettingsRootView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(appModel.menuBarVisibilityNote)
                 Text("The old preference pane's `ShowIcon` toggle is still preserved in storage, but it is not applied yet so the standalone app does not disappear.")
-                Text("Trackpad two-finger character recognition is now running in Swift. One-finger trackpad drawing, Magic Mouse drawing, and overlay parity are still pending.")
+                Text("Trackpad one-finger/two-finger character recognition and Magic Mouse drag-to-character are now running in Swift. Remaining work is mostly gesture feel tuning, extra overlays, and device-by-device calibration.")
                 Text("Latest touch frame: \(deviceManager.lastEventDescription)")
                 Text("Last gesture event: \(appModel.lastRecognizedGestureSummary)")
                 Text("Last executed command: \(commandExecutor.lastExecutedCommandSummary)")
