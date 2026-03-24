@@ -46,6 +46,30 @@ struct LegacySettingsStore {
         )
         settings.oneFingerDrawingEnabled = LegacyValue.bool(from: rawDomain["enOneDrawing"], default: defaults.oneFingerDrawingEnabled)
         settings.twoFingerDrawingEnabled = LegacyValue.bool(from: rawDomain["enTwoDrawing"], default: defaults.twoFingerDrawingEnabled)
+        settings.characterRecognitionDiagnosticsEnabled = LegacyValue.bool(
+            from: rawDomain["charRegDiagnostics"],
+            default: defaults.characterRecognitionDiagnosticsEnabled
+        )
+        settings.characterRecognitionHintDelay = LegacyValue.double(
+            from: rawDomain["charRegHintDelay"],
+            default: defaults.characterRecognitionHintDelay
+        )
+        settings.trackpadCharacterMinimumTravel = LegacyValue.double(
+            from: rawDomain["charRegTPMinTravel"],
+            default: defaults.trackpadCharacterMinimumTravel
+        )
+        settings.trackpadCharacterValidationSegments = LegacyValue.int(
+            from: rawDomain["charRegTPValidationSegments"],
+            default: defaults.trackpadCharacterValidationSegments
+        )
+        settings.magicMouseCharacterMinimumTravel = LegacyValue.double(
+            from: rawDomain["charRegMMMinTravel"],
+            default: defaults.magicMouseCharacterMinimumTravel
+        )
+        settings.magicMouseCharacterActivationSegments = LegacyValue.int(
+            from: rawDomain["charRegMMActivationSegments"],
+            default: defaults.magicMouseCharacterActivationSegments
+        )
 
         settings.trackpadCommands = commandSets(
             for: .trackpad,
@@ -85,6 +109,12 @@ struct LegacySettingsStore {
         domain["charRegMouseButton"] = settings.characterRecognitionMouseButton
         domain["enOneDrawing"] = settings.oneFingerDrawingEnabled ? 1 : 0
         domain["enTwoDrawing"] = settings.twoFingerDrawingEnabled ? 1 : 0
+        domain["charRegDiagnostics"] = settings.characterRecognitionDiagnosticsEnabled ? 1 : 0
+        domain["charRegHintDelay"] = settings.characterRecognitionHintDelay
+        domain["charRegTPMinTravel"] = settings.trackpadCharacterMinimumTravel
+        domain["charRegTPValidationSegments"] = settings.trackpadCharacterValidationSegments
+        domain["charRegMMMinTravel"] = settings.magicMouseCharacterMinimumTravel
+        domain["charRegMMActivationSegments"] = settings.magicMouseCharacterActivationSegments
 
         domain[CommandDevice.trackpad.legacyKey] = settings.trackpadCommands.map(\.legacyDictionary)
         domain[CommandDevice.magicMouse.legacyKey] = settings.magicMouseCommands.map(\.legacyDictionary)

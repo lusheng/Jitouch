@@ -12,14 +12,15 @@ final class GestureEngine {
     private var mouseRecognizers: [any GestureRecognizer]
 
     init(
+        characterRecognitionDiagnostics: CharacterRecognitionDiagnosticsStore = CharacterRecognitionDiagnosticsStore(),
         trackpadRecognizers: [any GestureRecognizer]? = nil,
         mouseRecognizers: [any GestureRecognizer]? = nil
     ) {
         let trackpadContext = TrackpadGestureContext()
         self.trackpadContext = trackpadContext
         self.trackpadCharacterRecognizers = [
-            TrackpadCharacterRecognizer(context: trackpadContext),
-            TrackpadOneFingerCharacterRecognizer(context: trackpadContext),
+            TrackpadCharacterRecognizer(context: trackpadContext, diagnostics: characterRecognitionDiagnostics),
+            TrackpadOneFingerCharacterRecognizer(context: trackpadContext, diagnostics: characterRecognitionDiagnostics),
         ]
         self.trackpadGestureRecognizers = trackpadRecognizers ?? [
             TrackpadMoveResizeRecognizer(),

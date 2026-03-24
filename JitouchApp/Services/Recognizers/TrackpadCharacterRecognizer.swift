@@ -6,6 +6,7 @@ import Foundation
 final class TrackpadCharacterRecognizer: GestureRecognizer {
     var isEnabled = false
 
+    private var baseMinimumPointTravelSquared: CGFloat = 0.0002
     private var minimumPointTravelSquared: CGFloat = 0.0002
     private var startingFingerDistance: CGFloat = 0.33
     private let maximumFingerDistance: CGFloat = 0.65
@@ -13,15 +14,17 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
     private let minimumTouchHeight: CGFloat = 0.14
     private let minimumFingerTravelSquared: CGFloat = 0.003
     private let distanceStabilityThreshold: CGFloat = 0.13
-    private let minimumValidatedSegments = 5
-    private let hintWaitTime: Double = 0.3
+    private var minimumValidatedSegments = 5
+    private var hintWaitTime: Double = 0.3
 
     private let context: TrackpadGestureContext
+    private let diagnostics: CharacterRecognitionDiagnosticsStore
     private let overlay = CharacterRecognitionOverlayController()
     private var session: TrackpadCharacterSession?
 
-    init(context: TrackpadGestureContext) {
+    init(context: TrackpadGestureContext, diagnostics: CharacterRecognitionDiagnosticsStore) {
         self.context = context
+        self.diagnostics = diagnostics
     }
 
     func processFrame(_ frame: TouchFrame) -> [GestureEvent] {
@@ -56,6 +59,7 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
         }
 
         session = TrackpadCharacterSession(touches: touches)
+        reportSnapshot(phase: .primed, session: session, reason: "Waiting for validation threshold")
         overlay.prepareTrackpadPath(at: session?.firstNormalizedPoint ?? .zero)
         return []
     }
@@ -69,9 +73,12 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
     func updateSettings(_ settings: JitouchSettings) {
         isEnabled = settings.trackpadEnabled && settings.trackpadCharacterRecognitionEnabled && settings.twoFingerDrawingEnabled
         startingFingerDistance = CGFloat(settings.characterRecognitionIndexRingDistance)
+        hintWaitTime = settings.characterRecognitionHintDelay
+        minimumValidatedSegments = max(2, settings.trackpadCharacterValidationSegments)
+        baseMinimumPointTravelSquared = CGFloat(settings.trackpadCharacterMinimumTravel)
 
         let scale = max(0.7, min(1.3, CGFloat(4.6666 / max(settings.sensitivity, 1.0))))
-        minimumPointTravelSquared = 0.0002 * scale
+        minimumPointTravelSquared = baseMinimumPointTravelSquared * scale
     }
 
     private func shouldStartRecognition(with touches: [TouchPoint]) -> Bool {
@@ -107,6 +114,7 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
         let ids = Set(touches.map(\.id))
         guard ids == session.touchIDs else {
             session.isActive = false
+            reportSnapshot(phase: .cancelled, session: session, reason: "Touch identifiers changed")
             overlay.hide()
             return []
         }
@@ -116,9 +124,11 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
         guard squaredDistance(session.lastPoint, midpoint) > minimumPointTravelSquared else {
             if session.engine.isCancelled {
                 session.isActive = false
+                reportSnapshot(phase: .cancelled, session: session, reason: "Candidate scores diverged too far")
                 overlay.hide()
             } else if session.isValidated {
                 overlay.updateTrackpadPath(midpoint, hint: hint)
+                reportSnapshot(phase: .active, session: session)
             }
             return []
         }
@@ -143,9 +153,11 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
                 abs(startDistanceSquared - currentDistanceSquared) < distanceStabilityThreshold
             {
                 session.isValidated = true
+                reportSnapshot(phase: .active, session: session, reason: "Validation passed")
                 overlay.reveal()
             } else {
                 session.isActive = false
+                reportSnapshot(phase: .cancelled, session: session, reason: "Validation gate failed")
                 overlay.hide()
                 return []
             }
@@ -153,10 +165,12 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
 
         if session.engine.isCancelled {
             session.isActive = false
+            reportSnapshot(phase: .cancelled, session: session, reason: "Engine cancelled recognition")
             overlay.hide()
             return []
         }
 
+        reportSnapshot(phase: session.isValidated ? .active : .validating, session: session)
         overlay.updateTrackpadPath(midpoint, hint: session.resolveHint(at: timestamp))
         return []
     }
@@ -166,22 +180,17 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
         defer { overlay.hide() }
 
         guard !cancelled, session.isValidated else {
+            let reason = cancelled ? "Recognition cancelled by extra fingers" : "Gesture ended before validation completed"
+            reportSnapshot(phase: .ignored, session: session, reason: reason)
             return []
         }
 
-        let geometry = CharacterStrokeGeometry(
-            start: session.firstPoint,
-            end: session.lastPoint,
-            top: session.top,
-            bottom: session.bottom,
-            left: session.left,
-            right: session.right
-        )
-
-        guard let character = session.engine.bestMatch(for: geometry) else {
+        guard let character = session.engine.bestMatch(for: session.geometry) else {
+            reportSnapshot(phase: .ignored, session: session, reason: "No template scored above zero")
             return []
         }
 
+        reportSnapshot(phase: .recognized, session: session, recognized: character)
         return [.characterRecognized(character)]
     }
 
@@ -209,6 +218,30 @@ final class TrackpadCharacterRecognizer: GestureRecognizer {
         let dx = lhs.x - rhs.x
         let dy = lhs.y - rhs.y
         return (dx * dx) + (dy * dy)
+    }
+
+    private func reportSnapshot(
+        phase: CharacterRecognitionPhase,
+        session: TrackpadCharacterSession?,
+        recognized: RecognizedCharacter? = nil,
+        reason: String? = nil
+    ) {
+        guard let session else { return }
+        let geometry = session.geometry
+        diagnostics.record(
+            CharacterRecognitionDiagnosticSnapshot(
+                timestamp: .now,
+                source: .trackpadTwoFinger,
+                phase: phase,
+                segmentCount: session.segmentCount,
+                hint: session.currentHint,
+                recognizedCharacter: recognized,
+                reason: reason,
+                verticalSpan: geometry.verticalSpan,
+                horizontalSpan: geometry.horizontalSpan,
+                candidates: session.engine.debugCandidates(for: geometry)
+            )
+        )
     }
 }
 
@@ -266,7 +299,11 @@ private struct TrackpadCharacterSession {
         right = max(right, point.x)
     }
 
-    private var geometry: CharacterStrokeGeometry {
+    var currentHint: String? {
+        displayedHint
+    }
+
+    var geometry: CharacterStrokeGeometry {
         CharacterStrokeGeometry(
             start: firstPoint,
             end: lastPoint,

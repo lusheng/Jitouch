@@ -60,6 +60,12 @@ struct JitouchSettings: Sendable {
     var characterRecognitionMouseButton: Int
     var oneFingerDrawingEnabled: Bool
     var twoFingerDrawingEnabled: Bool
+    var characterRecognitionDiagnosticsEnabled: Bool
+    var characterRecognitionHintDelay: Double
+    var trackpadCharacterMinimumTravel: Double
+    var trackpadCharacterValidationSegments: Int
+    var magicMouseCharacterMinimumTravel: Double
+    var magicMouseCharacterActivationSegments: Int
 
     var commandSets: [CommandDevice: [ApplicationCommandSet]]
 

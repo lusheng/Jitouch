@@ -83,6 +83,48 @@ struct SettingsRootView: View {
         )
     }
 
+    private var characterRecognitionDiagnosticsEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { appModel.settings.characterRecognitionDiagnosticsEnabled },
+            set: { appModel.setCharacterRecognitionDiagnosticsEnabled($0) }
+        )
+    }
+
+    private var characterRecognitionHintDelayBinding: Binding<Double> {
+        Binding(
+            get: { appModel.settings.characterRecognitionHintDelay },
+            set: { appModel.setCharacterRecognitionHintDelay($0) }
+        )
+    }
+
+    private var trackpadCharacterMinimumTravelBinding: Binding<Double> {
+        Binding(
+            get: { appModel.settings.trackpadCharacterMinimumTravel },
+            set: { appModel.setTrackpadCharacterMinimumTravel($0) }
+        )
+    }
+
+    private var trackpadCharacterValidationSegmentsBinding: Binding<Int> {
+        Binding(
+            get: { appModel.settings.trackpadCharacterValidationSegments },
+            set: { appModel.setTrackpadCharacterValidationSegments($0) }
+        )
+    }
+
+    private var magicMouseCharacterMinimumTravelBinding: Binding<Double> {
+        Binding(
+            get: { appModel.settings.magicMouseCharacterMinimumTravel },
+            set: { appModel.setMagicMouseCharacterMinimumTravel($0) }
+        )
+    }
+
+    private var magicMouseCharacterActivationSegmentsBinding: Binding<Int> {
+        Binding(
+            get: { appModel.settings.magicMouseCharacterActivationSegments },
+            set: { appModel.setMagicMouseCharacterActivationSegments($0) }
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -90,6 +132,7 @@ struct SettingsRootView: View {
                 runtimeStatus
                 generalSettings
                 characterRecognitionSettings
+                characterRecognitionCalibration
                 commandCoverage
                 deviceDiagnostics
                 compatibilityNotes
@@ -289,6 +332,82 @@ struct SettingsRootView: View {
         }
     }
 
+    private var characterRecognitionCalibration: some View {
+        GroupBox("Calibration & Diagnostics") {
+            VStack(alignment: .leading, spacing: 14) {
+                Toggle("Enable Live Character Diagnostics", isOn: characterRecognitionDiagnosticsEnabledBinding)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Hint Delay")
+                        Spacer()
+                        Text(characterRecognitionHintDelayBinding.wrappedValue, format: .number.precision(.fractionLength(2)))
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: characterRecognitionHintDelayBinding, in: 0.10 ... 0.60)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Trackpad Min Travel")
+                        Spacer()
+                        Text(trackpadCharacterMinimumTravelBinding.wrappedValue, format: .number.precision(.fractionLength(5)))
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: trackpadCharacterMinimumTravelBinding, in: 0.00005 ... 0.0010)
+                }
+
+                Stepper(
+                    "Trackpad Validation Segments: \(trackpadCharacterValidationSegmentsBinding.wrappedValue)",
+                    value: trackpadCharacterValidationSegmentsBinding,
+                    in: 2 ... 10
+                )
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Magic Mouse Min Travel")
+                        Spacer()
+                        Text(magicMouseCharacterMinimumTravelBinding.wrappedValue, format: .number.precision(.fractionLength(2)))
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: magicMouseCharacterMinimumTravelBinding, in: 1.0 ... 15.0)
+                }
+
+                Stepper(
+                    "Magic Mouse Activation Segments: \(magicMouseCharacterActivationSegmentsBinding.wrappedValue)",
+                    value: magicMouseCharacterActivationSegmentsBinding,
+                    in: 2 ... 8
+                )
+
+                HStack(spacing: 12) {
+                    Button("Clear Diagnostics") {
+                        appModel.clearCharacterRecognitionDiagnostics()
+                    }
+
+                    Text("These controls are stored in the same preference domain, so calibration survives restarts.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Divider()
+
+                if let snapshot = appModel.characterRecognitionDiagnostics.liveSnapshot {
+                    liveDiagnostics(snapshot)
+                } else {
+                    Text("No live character-recognition snapshot yet.")
+                        .foregroundStyle(.secondary)
+                }
+
+                if !appModel.characterRecognitionDiagnostics.recentSnapshots.isEmpty {
+                    Divider()
+                    recentDiagnostics
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 4)
+        }
+    }
+
     private var deviceDiagnostics: some View {
         GroupBox("Connected Devices") {
             VStack(alignment: .leading, spacing: 10) {
@@ -367,5 +486,102 @@ struct SettingsRootView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private func liveDiagnostics(_ snapshot: CharacterRecognitionDiagnosticSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Live Snapshot")
+                .font(.headline)
+
+            Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 8) {
+                GridRow {
+                    Text("Source")
+                        .foregroundStyle(.secondary)
+                    Text(snapshot.source.title)
+                }
+                GridRow {
+                    Text("Phase")
+                        .foregroundStyle(.secondary)
+                    Text(snapshot.phase.title)
+                }
+                GridRow {
+                    Text("Segments")
+                        .foregroundStyle(.secondary)
+                    Text("\(snapshot.segmentCount)")
+                }
+                GridRow {
+                    Text("Hint")
+                        .foregroundStyle(.secondary)
+                    Text(snapshot.hint ?? "None")
+                }
+                GridRow {
+                    Text("Recognized")
+                        .foregroundStyle(.secondary)
+                    Text(snapshot.recognizedCharacter?.value ?? "Pending")
+                }
+                GridRow {
+                    Text("Reason")
+                        .foregroundStyle(.secondary)
+                    Text(snapshot.reason ?? "None")
+                }
+                GridRow {
+                    Text("Span")
+                        .foregroundStyle(.secondary)
+                    Text(spanDescription(snapshot))
+                }
+                GridRow {
+                    Text("Updated")
+                        .foregroundStyle(.secondary)
+                    Text(snapshot.timestamp.formatted(date: .omitted, time: .standard))
+                }
+            }
+
+            if !snapshot.candidates.isEmpty {
+                Text("Top Candidates")
+                    .font(.headline)
+
+                Text(candidateLines(snapshot))
+                    .font(.caption.monospaced())
+            }
+        }
+    }
+
+    private var recentDiagnostics: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Recent Sessions")
+                .font(.headline)
+
+            Text(recentSnapshotLines())
+                .font(.caption.monospaced())
+        }
+    }
+
+    private func spanDescription(_ snapshot: CharacterRecognitionDiagnosticSnapshot) -> String {
+        guard let verticalSpan = snapshot.verticalSpan, let horizontalSpan = snapshot.horizontalSpan else {
+            return "Not sampled"
+        }
+
+        return "\(verticalSpan.formatted(.number.precision(.fractionLength(3)))) x \(horizontalSpan.formatted(.number.precision(.fractionLength(3))))"
+    }
+
+    private func candidateLines(_ snapshot: CharacterRecognitionDiagnosticSnapshot) -> String {
+        snapshot.candidates.map { candidate in
+            let score = candidate.score.formatted(.number.precision(.fractionLength(2)))
+            let progress = "\(candidate.matchedSegments)/\(candidate.totalSegments)"
+            let completion = candidate.isComplete ? "complete" : "tracking"
+            let geometry = candidate.isAcceptedByGeometry ? "accepted" : "geometry-filtered"
+            return "\(candidate.value.padding(toLength: 8, withPad: " ", startingAt: 0)) score \(score)  segments \(progress)  \(completion)  \(geometry)"
+        }
+        .joined(separator: "\n")
+    }
+
+    private func recentSnapshotLines() -> String {
+        appModel.characterRecognitionDiagnostics.recentSnapshots
+            .prefix(5)
+            .map { snapshot in
+                let outcome = snapshot.recognizedCharacter?.value ?? snapshot.hint ?? "No Match"
+                return "\(snapshot.timestamp.formatted(date: .omitted, time: .standard))  \(snapshot.source.title)  \(snapshot.phase.title)  \(outcome)"
+            }
+            .joined(separator: "\n")
     }
 }

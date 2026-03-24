@@ -7,7 +7,12 @@ final class MagicMouseCharacterRecognitionService {
     var onRecognizedCharacter: ((RecognizedCharacter) -> Void)?
 
     private var eventHandlerID: UUID?
+    private let diagnostics: CharacterRecognitionDiagnosticsStore
     private let overlay = CharacterRecognitionOverlayController()
+
+    init(diagnostics: CharacterRecognitionDiagnosticsStore) {
+        self.diagnostics = diagnostics
+    }
 
     func installEventTapHandler(on eventTapManager: EventTapManager) {
         if let eventHandlerID {
@@ -21,6 +26,9 @@ final class MagicMouseCharacterRecognitionService {
         magicMouseCharacterRecognitionLock.lock()
         magicMouseCharacterRecognitionState.isEnabled = settings.isEnabled && settings.magicMouseEnabled && settings.magicMouseCharacterRecognitionEnabled
         magicMouseCharacterRecognitionState.button = MagicMouseCharacterRecognitionButton(rawValue: settings.characterRecognitionMouseButton) ?? .middle
+        magicMouseCharacterRecognitionState.minimumPointTravelSquared = CGFloat(settings.magicMouseCharacterMinimumTravel)
+        magicMouseCharacterRecognitionState.activationSegmentThreshold = max(2, settings.magicMouseCharacterActivationSegments)
+        magicMouseCharacterRecognitionState.hintWaitTime = settings.characterRecognitionHintDelay
         magicMouseCharacterRecognitionState.session = nil
         magicMouseCharacterRecognitionLock.unlock()
         if !(settings.isEnabled && settings.magicMouseEnabled && settings.magicMouseCharacterRecognitionEnabled) {
@@ -49,6 +57,30 @@ final class MagicMouseCharacterRecognitionService {
 
     fileprivate func hideOverlay() {
         overlay.hide()
+    }
+
+    fileprivate func reportSnapshot(
+        phase: CharacterRecognitionPhase,
+        session: MagicMouseCharacterRecognitionSession?,
+        recognized: RecognizedCharacter? = nil,
+        reason: String? = nil
+    ) {
+        guard let session else { return }
+        let geometry = session.geometry
+        diagnostics.record(
+            CharacterRecognitionDiagnosticSnapshot(
+                timestamp: .now,
+                source: .magicMouse,
+                phase: phase,
+                segmentCount: session.segmentCount,
+                hint: session.currentHint,
+                recognizedCharacter: recognized,
+                reason: reason,
+                verticalSpan: geometry.verticalSpan,
+                horizontalSpan: geometry.horizontalSpan,
+                candidates: session.engine.debugCandidates(for: geometry)
+            )
+        )
     }
 }
 
@@ -105,14 +137,16 @@ private enum MagicMouseCharacterRecognitionButton: Int {
 private struct MagicMouseCharacterRecognitionState {
     var isEnabled = false
     var button: MagicMouseCharacterRecognitionButton = .middle
+    var minimumPointTravelSquared: CGFloat = 5
+    var activationSegmentThreshold = 3
+    var hintWaitTime: Double = 0.3
     var session: MagicMouseCharacterRecognitionSession?
 }
 
 private struct MagicMouseCharacterRecognitionSession {
-    let minimumPointTravelSquared: CGFloat = 5
-    let activationSegmentThreshold = 3
-    let hintWaitTime: Double = 0.3
-
+    let minimumPointTravelSquared: CGFloat
+    let activationSegmentThreshold: Int
+    let hintWaitTime: Double
     let firstPoint: CGPoint
     let startScreenPoint: CGPoint
     var lastPoint: CGPoint
@@ -129,7 +163,16 @@ private struct MagicMouseCharacterRecognitionSession {
         segmentCount >= activationSegmentThreshold
     }
 
-    init(startingAt point: CGPoint, screenPoint: CGPoint) {
+    init(
+        startingAt point: CGPoint,
+        screenPoint: CGPoint,
+        minimumPointTravelSquared: CGFloat,
+        activationSegmentThreshold: Int,
+        hintWaitTime: Double
+    ) {
+        self.minimumPointTravelSquared = minimumPointTravelSquared
+        self.activationSegmentThreshold = activationSegmentThreshold
+        self.hintWaitTime = hintWaitTime
         firstPoint = point
         startScreenPoint = screenPoint
         lastPoint = point
@@ -172,13 +215,17 @@ private struct MagicMouseCharacterRecognitionSession {
         return displayedHint
     }
 
+    var currentHint: String? {
+        displayedHint
+    }
+
     private func squaredDistance(from lhs: CGPoint, to rhs: CGPoint) -> CGFloat {
         let dx = lhs.x - rhs.x
         let dy = lhs.y - rhs.y
         return (dx * dx) + (dy * dy)
     }
 
-    private var geometry: CharacterStrokeGeometry {
+    var geometry: CharacterStrokeGeometry {
         CharacterStrokeGeometry(
             start: firstPoint,
             end: lastPoint,
@@ -226,7 +273,13 @@ private func jitouchMagicMouseCharacterRecognitionEventHandler(_ event: CGEvent,
 
     case button.dragType:
         if magicMouseCharacterRecognitionState.session == nil {
-            magicMouseCharacterRecognitionState.session = MagicMouseCharacterRecognitionSession(startingAt: recognitionPoint, screenPoint: location)
+            magicMouseCharacterRecognitionState.session = MagicMouseCharacterRecognitionSession(
+                startingAt: recognitionPoint,
+                screenPoint: location,
+                minimumPointTravelSquared: magicMouseCharacterRecognitionState.minimumPointTravelSquared,
+                activationSegmentThreshold: magicMouseCharacterRecognitionState.activationSegmentThreshold,
+                hintWaitTime: magicMouseCharacterRecognitionState.hintWaitTime
+            )
         } else {
             magicMouseCharacterRecognitionState.session?.advance(to: recognitionPoint)
         }
@@ -245,11 +298,17 @@ private func jitouchMagicMouseCharacterRecognitionEventHandler(_ event: CGEvent,
                     hint: hint,
                     activated: session.isActivated
                 )
+                activeMagicMouseCharacterRecognitionService?.reportSnapshot(
+                    phase: session.isActivated ? .active : .validating,
+                    session: session,
+                    reason: session.isActivated ? "Activation threshold reached" : "Collecting more segments"
+                )
             }
         }
         return nil
 
     case button.upType:
+        let sessionForDiagnostics = magicMouseCharacterRecognitionState.session
         let resolution: MagicMouseCharacterRecognitionResolution
         if let session = magicMouseCharacterRecognitionState.session {
             if session.isActivated {
@@ -267,16 +326,31 @@ private func jitouchMagicMouseCharacterRecognitionEventHandler(_ event: CGEvent,
         case .passThrough:
             Task { @MainActor in
                 activeMagicMouseCharacterRecognitionService?.hideOverlay()
+                activeMagicMouseCharacterRecognitionService?.reportSnapshot(
+                    phase: .ignored,
+                    session: sessionForDiagnostics,
+                    reason: "Mouse drag did not activate character recognition"
+                )
             }
             replayMouseClick(button: button, at: location)
         case let .recognized(character):
             Task { @MainActor in
                 activeMagicMouseCharacterRecognitionService?.hideOverlay()
                 activeMagicMouseCharacterRecognitionService?.deliver(character)
+                activeMagicMouseCharacterRecognitionService?.reportSnapshot(
+                    phase: .recognized,
+                    session: sessionForDiagnostics,
+                    recognized: character
+                )
             }
         case .ignored:
             Task { @MainActor in
                 activeMagicMouseCharacterRecognitionService?.hideOverlay()
+                activeMagicMouseCharacterRecognitionService?.reportSnapshot(
+                    phase: .ignored,
+                    session: sessionForDiagnostics,
+                    reason: "No template scored above zero"
+                )
             }
             break
         }

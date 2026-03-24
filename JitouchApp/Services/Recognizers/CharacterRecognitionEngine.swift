@@ -148,6 +148,34 @@ struct CharacterRecognitionEngine {
         return bestCandidate.score >= 0 ? bestCandidate.template.value : nil
     }
 
+    func debugCandidates(for geometry: CharacterStrokeGeometry, limit: Int = 5) -> [CharacterRecognitionCandidateSnapshot] {
+        candidates
+            .map { candidate in
+                CharacterRecognitionCandidateSnapshot(
+                    value: candidate.template.value,
+                    score: candidate.score,
+                    matchedSegments: min(candidate.stepIndex, candidate.template.segments.count),
+                    totalSegments: candidate.template.segments.count,
+                    isComplete: candidate.isComplete,
+                    isAcceptedByGeometry: geometry.accepts(candidate.template.value)
+                )
+            }
+            .sorted { lhs, rhs in
+                if lhs.isComplete != rhs.isComplete {
+                    return lhs.isComplete && !rhs.isComplete
+                }
+                if lhs.isAcceptedByGeometry != rhs.isAcceptedByGeometry {
+                    return lhs.isAcceptedByGeometry && !rhs.isAcceptedByGeometry
+                }
+                if lhs.matchedSegments != rhs.matchedSegments {
+                    return lhs.matchedSegments > rhs.matchedSegments
+                }
+                return lhs.score > rhs.score
+            }
+            .prefix(limit)
+            .map { $0 }
+    }
+
     private func score(
         _ input: Double,
         target: Double,

@@ -7,22 +7,24 @@ final class TrackpadOneFingerCharacterRecognizer: GestureRecognizer {
     var isEnabled = false
 
     private let context: TrackpadGestureContext
+    private let diagnostics: CharacterRecognitionDiagnosticsStore
     private let overlay = CharacterRecognitionOverlayController()
 
-    private let minimumPointTravelSquared: CGFloat = 0.0002
+    private var minimumPointTravelSquared: CGFloat = 0.0002
     private let maximumFingerDistance: CGFloat = 0.65
     private let maximumVerticalOffset: CGFloat = 0.5
     private let stagedFingerDriftThreshold: CGFloat = 0.001
     private let offscreenCursorLocation = CGPoint(x: 10_000, y: 10_000)
-    private let hintWaitTime: Double = 0.3
+    private var hintWaitTime: Double = 0.3
 
     private var state = TrackpadOneFingerCharacterState.idle
     private var indexRingDistance: CGFloat = 0.33
     private var clickSpeed: Double = 0.25
     private var touchSizeThreshold: Float = 0.45
 
-    init(context: TrackpadGestureContext) {
+    init(context: TrackpadGestureContext, diagnostics: CharacterRecognitionDiagnosticsStore) {
         self.context = context
+        self.diagnostics = diagnostics
     }
 
     func processFrame(_ frame: TouchFrame) -> [GestureEvent] {
@@ -84,6 +86,9 @@ final class TrackpadOneFingerCharacterRecognizer: GestureRecognizer {
         indexRingDistance = CGFloat(settings.characterRecognitionIndexRingDistance)
         clickSpeed = settings.clickSpeed
         touchSizeThreshold = Float(settings.sensitivity / 10.0)
+        hintWaitTime = settings.characterRecognitionHintDelay
+        let scale = max(0.7, min(1.3, CGFloat(4.6666 / max(settings.sensitivity, 1.0))))
+        minimumPointTravelSquared = CGFloat(settings.trackpadCharacterMinimumTravel) * scale
     }
 
     private func advanceArmingState(
@@ -106,6 +111,20 @@ final class TrackpadOneFingerCharacterRecognizer: GestureRecognizer {
                 anchorPositions: Dictionary(uniqueKeysWithValues: touches.map { ($0.id, $0.position) })
             )
             state = .awaitingRelease(stagedSession)
+            diagnostics.record(
+                CharacterRecognitionDiagnosticSnapshot(
+                    timestamp: .now,
+                    source: .trackpadOneFinger,
+                    phase: .primed,
+                    segmentCount: 0,
+                    hint: nil,
+                    recognizedCharacter: nil,
+                    reason: "Waiting for the anchor finger to lift",
+                    verticalSpan: nil,
+                    horizontalSpan: nil,
+                    candidates: []
+                )
+            )
         default:
             state = .idle
         }
@@ -148,8 +167,23 @@ final class TrackpadOneFingerCharacterRecognizer: GestureRecognizer {
             overlay.beginTrackpadPath(at: touch.position)
             parkMouseOffscreen()
             state = .drawing(drawingSession)
+            reportSnapshot(phase: .active, session: drawingSession, reason: "Drawing started")
         case 2:
             guard isStagedPoseStable(touches, anchorPositions: session.anchorPositions) else {
+                diagnostics.record(
+                    CharacterRecognitionDiagnosticSnapshot(
+                        timestamp: .now,
+                        source: .trackpadOneFinger,
+                        phase: .cancelled,
+                        segmentCount: 0,
+                        hint: nil,
+                        recognizedCharacter: nil,
+                        reason: "Two-finger staging pose drifted too far",
+                        verticalSpan: nil,
+                        horizontalSpan: nil,
+                        candidates: []
+                    )
+                )
                 state = .idle
                 return []
             }
@@ -171,13 +205,16 @@ final class TrackpadOneFingerCharacterRecognizer: GestureRecognizer {
             resetAfterDrawing(originalMouseLocation: session.originalMouseLocation)
 
             guard touches.isEmpty else {
+                reportSnapshot(phase: .cancelled, session: session, reason: "Touch identifiers changed during drawing")
                 return []
             }
 
             guard let character = session.engine.bestMatch(for: session.geometry) else {
+                reportSnapshot(phase: .ignored, session: session, reason: "No template scored above zero")
                 return []
             }
 
+            reportSnapshot(phase: .recognized, session: session, recognized: character)
             return [.characterRecognized(character)]
         }
 
@@ -189,6 +226,7 @@ final class TrackpadOneFingerCharacterRecognizer: GestureRecognizer {
             session.engine.advance(angle: angle)
             session.lastPoint = touch.position
             session.expandBounds(with: touch.position)
+            session.segmentCount += 1
             session.queueHintRefresh(after: timestamp + hintWaitTime)
             overlay.updateTrackpadPath(touch.position, hint: session.resolveHint(at: timestamp))
         } else {
@@ -198,10 +236,12 @@ final class TrackpadOneFingerCharacterRecognizer: GestureRecognizer {
         parkMouseOffscreen()
 
         if session.engine.isCancelled {
+            reportSnapshot(phase: .cancelled, session: session, reason: "Engine cancelled recognition")
             resetAfterDrawing(originalMouseLocation: session.originalMouseLocation)
             return []
         }
 
+        reportSnapshot(phase: .active, session: session)
         state = .drawing(session)
         return []
     }
@@ -275,6 +315,29 @@ final class TrackpadOneFingerCharacterRecognizer: GestureRecognizer {
         event?.setIntegerValueField(.eventSourceUserData, value: jitouchSyntheticMouseEventUserData)
         event?.post(tap: .cghidEventTap)
     }
+
+    private func reportSnapshot(
+        phase: CharacterRecognitionPhase,
+        session: TrackpadOneFingerDrawingSession,
+        recognized: RecognizedCharacter? = nil,
+        reason: String? = nil
+    ) {
+        let geometry = session.geometry
+        diagnostics.record(
+            CharacterRecognitionDiagnosticSnapshot(
+                timestamp: .now,
+                source: .trackpadOneFinger,
+                phase: phase,
+                segmentCount: session.segmentCount,
+                hint: session.currentHint,
+                recognizedCharacter: recognized,
+                reason: reason,
+                verticalSpan: geometry.verticalSpan,
+                horizontalSpan: geometry.horizontalSpan,
+                candidates: session.engine.debugCandidates(for: geometry)
+            )
+        )
+    }
 }
 
 private enum TrackpadOneFingerCharacterState {
@@ -300,6 +363,7 @@ private struct TrackpadOneFingerDrawingSession {
     let touchID: Int
     let originalMouseLocation: CGPoint
     var engine = CharacterRecognitionEngine()
+    var segmentCount = 0
     private var pendingHintTimestamp: Double?
     private var displayedHint: String?
 
@@ -352,5 +416,9 @@ private struct TrackpadOneFingerDrawingSession {
             self.pendingHintTimestamp = nil
         }
         return displayedHint
+    }
+
+    var currentHint: String? {
+        displayedHint
     }
 }

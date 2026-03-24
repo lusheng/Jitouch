@@ -71,6 +71,12 @@ enum CommandCatalog {
             characterRecognitionMouseButton: 0,
             oneFingerDrawingEnabled: false,
             twoFingerDrawingEnabled: true,
+            characterRecognitionDiagnosticsEnabled: true,
+            characterRecognitionHintDelay: 0.30,
+            trackpadCharacterMinimumTravel: 0.0002,
+            trackpadCharacterValidationSegments: 5,
+            magicMouseCharacterMinimumTravel: 5.0,
+            magicMouseCharacterActivationSegments: 3,
             commandSets: [
                 .trackpad: trackpadDefaults,
                 .magicMouse: magicMouseDefaults,
