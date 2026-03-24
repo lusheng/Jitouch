@@ -1,5 +1,31 @@
-project.xcworkspace
-xcuserdata
-/prefpane/Jitouch.app
-/build
+# Xcode
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+xcuserdata/
+*.xcworkspace/
+DerivedData/
+build/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.moved-aside
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Swift Package Manager
+.build/
+Package.resolved
+
+# Archives
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Distribution
+*.pkg
+*.dmg
