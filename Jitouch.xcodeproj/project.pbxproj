@@ -1,0 +1,464 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00E8520AA5A4BDCDEEEACC6E /* CharacterRecognitionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A98924FCF2ACC4A3C53F7B9E /* CharacterRecognitionEngine.swift */; };
+		0668AF204C84AEBFCC6AF9E7 /* KeyboardSimulationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FC6E67190B581D9CE1BAFE /* KeyboardSimulationService.swift */; };
+		0EA656BB4785053CED683192 /* TouchModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 820EE8490CA6A0A6410CD9F1 /* TouchModels.swift */; };
+		128FF61EA82550D439F7BFC2 /* MenuBarContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DD8EDB6D3DAFC258C4B60F6 /* MenuBarContentView.swift */; };
+		1B0A45345094EEE241CFFB90 /* TrackpadFixFingerRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD17B58C57E3008293B499D0 /* TrackpadFixFingerRecognizer.swift */; };
+		1C583D654DFB8690B75FD966 /* GestureRecognizerProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE1CA4933E642FA6E8053D7E /* GestureRecognizerProtocol.swift */; };
+		24371E48D5CD20D0AF23678D /* TrackpadTapRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6422C80A0E83380A54BB63F /* TrackpadTapRecognizer.swift */; };
+		38BD60820D86A0CBD4ACBC9B /* TrackpadGestureContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D890ED669543A6748A6065 /* TrackpadGestureContext.swift */; };
+		4A75318E3094CEE3F1342DA7 /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA38B19070FA42BBD95238B0 /* DeviceManager.swift */; };
+		4EDF0CCE359A691C1FFFFDE3 /* LegacySettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 840D59D714EBAC53A2A0820F /* LegacySettingsStore.swift */; };
+		55BD54320323AB47C3B1E91E /* TrackpadMoveResizeRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFE2D5870F27EB284B8146B2 /* TrackpadMoveResizeRecognizer.swift */; };
+		6C7419E0F992219B0440E30E /* TrackpadPinchRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3159951C1D10FD8C69B03532 /* TrackpadPinchRecognizer.swift */; };
+		74626E27447194166FE64889 /* GestureEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F390E51F1510CCCB11092683 /* GestureEngine.swift */; };
+		84FD992106AAFEE817CC7E8B /* AccessibilityPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2879F694DD48BCE7060FB87C /* AccessibilityPermissionService.swift */; };
+		91AACAC14288A510EED73EC5 /* MoveResizeOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A2BA40362D31EB58D79888B /* MoveResizeOverlayController.swift */; };
+		A4C400DB90A17C3C27A39AA4 /* CommandExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D92D27573BB3660084D73E07 /* CommandExecutor.swift */; };
+		A987BA219B679C5A78BF488A /* CommandModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 699024737AFA1117DFB7A230 /* CommandModels.swift */; };
+		ABEC57FAD763B74FCBC3B359 /* EventTapManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD9A734BDD56D1680EFB84C9 /* EventTapManager.swift */; };
+		BFD45DE45086877148D7B7F4 /* SettingsRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8A3DD7ED92A4383D585FE67 /* SettingsRootView.swift */; };
+		CB24DF2306AF6F85E6F10443 /* TrackpadSwipeRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8852E51C8C98843B8A9EF817 /* TrackpadSwipeRecognizer.swift */; };
+		D1B4BBB4F913F85AD3DE15EF /* JitouchAppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FF53B21A89EF71D6A2B1E1D /* JitouchAppModel.swift */; };
+		D32EBB628B59E2CD5EC05B15 /* JitouchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFF564E52A9083C2B870724B /* JitouchApp.swift */; };
+		DF23CF902B625F831A7548FA /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94F02468712B3FA6FB8DBA33 /* AppSettings.swift */; };
+		DFD831379C0978927592FC62 /* MagicMouseRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67F97A66A466E1B2C6D046C9 /* MagicMouseRecognizer.swift */; };
+		E4207FFE03D8D187D72C85FD /* TrackpadTabSwitchRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09145296A5CBF5F3FA519152 /* TrackpadTabSwitchRecognizer.swift */; };
+		F70EADC8684486E441FD778B /* CommandCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BDFB0DE08AFBD12312FBC9 /* CommandCatalog.swift */; };
+		FDA4B4812BF1F168A07166A4 /* TrackpadCharacterRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6035F20802AA9551ECA1B896 /* TrackpadCharacterRecognizer.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		09145296A5CBF5F3FA519152 /* TrackpadTabSwitchRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadTabSwitchRecognizer.swift; sourceTree = "<group>"; };
+		2879F694DD48BCE7060FB87C /* AccessibilityPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPermissionService.swift; sourceTree = "<group>"; };
+		28D890ED669543A6748A6065 /* TrackpadGestureContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadGestureContext.swift; sourceTree = "<group>"; };
+		2A2BA40362D31EB58D79888B /* MoveResizeOverlayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoveResizeOverlayController.swift; sourceTree = "<group>"; };
+		3159951C1D10FD8C69B03532 /* TrackpadPinchRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadPinchRecognizer.swift; sourceTree = "<group>"; };
+		5DD8EDB6D3DAFC258C4B60F6 /* MenuBarContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContentView.swift; sourceTree = "<group>"; };
+		5FF53B21A89EF71D6A2B1E1D /* JitouchAppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JitouchAppModel.swift; sourceTree = "<group>"; };
+		6035F20802AA9551ECA1B896 /* TrackpadCharacterRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadCharacterRecognizer.swift; sourceTree = "<group>"; };
+		67F97A66A466E1B2C6D046C9 /* MagicMouseRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagicMouseRecognizer.swift; sourceTree = "<group>"; };
+		699024737AFA1117DFB7A230 /* CommandModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandModels.swift; sourceTree = "<group>"; };
+		820EE8490CA6A0A6410CD9F1 /* TouchModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchModels.swift; sourceTree = "<group>"; };
+		840D59D714EBAC53A2A0820F /* LegacySettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacySettingsStore.swift; sourceTree = "<group>"; };
+		8852E51C8C98843B8A9EF817 /* TrackpadSwipeRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadSwipeRecognizer.swift; sourceTree = "<group>"; };
+		94F02468712B3FA6FB8DBA33 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		A1FC6E67190B581D9CE1BAFE /* KeyboardSimulationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardSimulationService.swift; sourceTree = "<group>"; };
+		A98924FCF2ACC4A3C53F7B9E /* CharacterRecognitionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterRecognitionEngine.swift; sourceTree = "<group>"; };
+		AA38B19070FA42BBD95238B0 /* DeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
+		AFF564E52A9083C2B870724B /* JitouchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JitouchApp.swift; sourceTree = "<group>"; };
+		CD17B58C57E3008293B499D0 /* TrackpadFixFingerRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadFixFingerRecognizer.swift; sourceTree = "<group>"; };
+		D0BDFB0DE08AFBD12312FBC9 /* CommandCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandCatalog.swift; sourceTree = "<group>"; };
+		D6422C80A0E83380A54BB63F /* TrackpadTapRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadTapRecognizer.swift; sourceTree = "<group>"; };
+		D8A3DD7ED92A4383D585FE67 /* SettingsRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsRootView.swift; sourceTree = "<group>"; };
+		D92D27573BB3660084D73E07 /* CommandExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandExecutor.swift; sourceTree = "<group>"; };
+		EFE2D5870F27EB284B8146B2 /* TrackpadMoveResizeRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadMoveResizeRecognizer.swift; sourceTree = "<group>"; };
+		F30ED8C3E9345F41E2B6F001 /* Jitouch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Jitouch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F390E51F1510CCCB11092683 /* GestureEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureEngine.swift; sourceTree = "<group>"; };
+		FD9A734BDD56D1680EFB84C9 /* EventTapManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTapManager.swift; sourceTree = "<group>"; };
+		FE1CA4933E642FA6E8053D7E /* GestureRecognizerProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureRecognizerProtocol.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		2184AB5EFF9D4D61D7665036 = {
+			isa = PBXGroup;
+			children = (
+				CACAC4F1A29CB6E6B2EFBEE2 /* JitouchApp */,
+				E4849E4715E92551713E9C65 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5DD343A798709EB7072D3881 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				2879F694DD48BCE7060FB87C /* AccessibilityPermissionService.swift */,
+				D0BDFB0DE08AFBD12312FBC9 /* CommandCatalog.swift */,
+				D92D27573BB3660084D73E07 /* CommandExecutor.swift */,
+				AA38B19070FA42BBD95238B0 /* DeviceManager.swift */,
+				FD9A734BDD56D1680EFB84C9 /* EventTapManager.swift */,
+				F390E51F1510CCCB11092683 /* GestureEngine.swift */,
+				5FF53B21A89EF71D6A2B1E1D /* JitouchAppModel.swift */,
+				A1FC6E67190B581D9CE1BAFE /* KeyboardSimulationService.swift */,
+				840D59D714EBAC53A2A0820F /* LegacySettingsStore.swift */,
+				2A2BA40362D31EB58D79888B /* MoveResizeOverlayController.swift */,
+				991A46F596B84ADF08BC590E /* Recognizers */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		8098728DA519CE44F1810688 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				AFF564E52A9083C2B870724B /* JitouchApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		961895191473505209C872B8 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				94F02468712B3FA6FB8DBA33 /* AppSettings.swift */,
+				699024737AFA1117DFB7A230 /* CommandModels.swift */,
+				820EE8490CA6A0A6410CD9F1 /* TouchModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		991A46F596B84ADF08BC590E /* Recognizers */ = {
+			isa = PBXGroup;
+			children = (
+				A98924FCF2ACC4A3C53F7B9E /* CharacterRecognitionEngine.swift */,
+				FE1CA4933E642FA6E8053D7E /* GestureRecognizerProtocol.swift */,
+				67F97A66A466E1B2C6D046C9 /* MagicMouseRecognizer.swift */,
+				6035F20802AA9551ECA1B896 /* TrackpadCharacterRecognizer.swift */,
+				CD17B58C57E3008293B499D0 /* TrackpadFixFingerRecognizer.swift */,
+				28D890ED669543A6748A6065 /* TrackpadGestureContext.swift */,
+				EFE2D5870F27EB284B8146B2 /* TrackpadMoveResizeRecognizer.swift */,
+				3159951C1D10FD8C69B03532 /* TrackpadPinchRecognizer.swift */,
+				8852E51C8C98843B8A9EF817 /* TrackpadSwipeRecognizer.swift */,
+				09145296A5CBF5F3FA519152 /* TrackpadTabSwitchRecognizer.swift */,
+				D6422C80A0E83380A54BB63F /* TrackpadTapRecognizer.swift */,
+			);
+			path = Recognizers;
+			sourceTree = "<group>";
+		};
+		CACAC4F1A29CB6E6B2EFBEE2 /* JitouchApp */ = {
+			isa = PBXGroup;
+			children = (
+				8098728DA519CE44F1810688 /* App */,
+				961895191473505209C872B8 /* Models */,
+				5DD343A798709EB7072D3881 /* Services */,
+				D5E78C3074C65C9931078DCF /* Views */,
+			);
+			path = JitouchApp;
+			sourceTree = "<group>";
+		};
+		D5E78C3074C65C9931078DCF /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				5DD8EDB6D3DAFC258C4B60F6 /* MenuBarContentView.swift */,
+				D8A3DD7ED92A4383D585FE67 /* SettingsRootView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		E4849E4715E92551713E9C65 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F30ED8C3E9345F41E2B6F001 /* Jitouch.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		03F05428301DF0035DAD0FCF /* Jitouch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F80E185DB0C217773AB29DCF /* Build configuration list for PBXNativeTarget "Jitouch" */;
+			buildPhases = (
+				CCC48E8B22E71851846432E1 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Jitouch;
+			packageProductDependencies = (
+			);
+			productName = Jitouch;
+			productReference = F30ED8C3E9345F41E2B6F001 /* Jitouch.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		16558E697FA6891847A9B8BA /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					03F05428301DF0035DAD0FCF = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 9F9D6CAF5F689628EBEEE2E8 /* Build configuration list for PBXProject "Jitouch" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 2184AB5EFF9D4D61D7665036;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = E4849E4715E92551713E9C65 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				03F05428301DF0035DAD0FCF /* Jitouch */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		CCC48E8B22E71851846432E1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				84FD992106AAFEE817CC7E8B /* AccessibilityPermissionService.swift in Sources */,
+				DF23CF902B625F831A7548FA /* AppSettings.swift in Sources */,
+				00E8520AA5A4BDCDEEEACC6E /* CharacterRecognitionEngine.swift in Sources */,
+				F70EADC8684486E441FD778B /* CommandCatalog.swift in Sources */,
+				A4C400DB90A17C3C27A39AA4 /* CommandExecutor.swift in Sources */,
+				A987BA219B679C5A78BF488A /* CommandModels.swift in Sources */,
+				4A75318E3094CEE3F1342DA7 /* DeviceManager.swift in Sources */,
+				ABEC57FAD763B74FCBC3B359 /* EventTapManager.swift in Sources */,
+				74626E27447194166FE64889 /* GestureEngine.swift in Sources */,
+				1C583D654DFB8690B75FD966 /* GestureRecognizerProtocol.swift in Sources */,
+				D32EBB628B59E2CD5EC05B15 /* JitouchApp.swift in Sources */,
+				D1B4BBB4F913F85AD3DE15EF /* JitouchAppModel.swift in Sources */,
+				0668AF204C84AEBFCC6AF9E7 /* KeyboardSimulationService.swift in Sources */,
+				4EDF0CCE359A691C1FFFFDE3 /* LegacySettingsStore.swift in Sources */,
+				DFD831379C0978927592FC62 /* MagicMouseRecognizer.swift in Sources */,
+				128FF61EA82550D439F7BFC2 /* MenuBarContentView.swift in Sources */,
+				91AACAC14288A510EED73EC5 /* MoveResizeOverlayController.swift in Sources */,
+				BFD45DE45086877148D7B7F4 /* SettingsRootView.swift in Sources */,
+				0EA656BB4785053CED683192 /* TouchModels.swift in Sources */,
+				FDA4B4812BF1F168A07166A4 /* TrackpadCharacterRecognizer.swift in Sources */,
+				1B0A45345094EEE241CFFB90 /* TrackpadFixFingerRecognizer.swift in Sources */,
+				38BD60820D86A0CBD4ACBC9B /* TrackpadGestureContext.swift in Sources */,
+				55BD54320323AB47C3B1E91E /* TrackpadMoveResizeRecognizer.swift in Sources */,
+				6C7419E0F992219B0440E30E /* TrackpadPinchRecognizer.swift in Sources */,
+				CB24DF2306AF6F85E6F10443 /* TrackpadSwipeRecognizer.swift in Sources */,
+				E4207FFE03D8D187D72C85FD /* TrackpadTabSwitchRecognizer.swift in Sources */,
+				24371E48D5CD20D0AF23678D /* TrackpadTapRecognizer.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2EACAF02F705A13D8F52D7EB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		4E80549D6A768A752419CADF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				APPLICATION_CATEGORY = "public.app-category.utilities";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/System/Library/PrivateFrameworks,
+				);
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = JitouchApp/Resources/Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					MultitouchSupport,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jitouch.Jitouch;
+				PRODUCT_NAME = Jitouch;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OBJC_BRIDGING_HEADER = "JitouchApp/Jitouch-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		A12CAB54AEFF697119F5165A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				APPLICATION_CATEGORY = "public.app-category.utilities";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/System/Library/PrivateFrameworks,
+				);
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = JitouchApp/Resources/Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					MultitouchSupport,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jitouch.Jitouch;
+				PRODUCT_NAME = Jitouch;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_BRIDGING_HEADER = "JitouchApp/Jitouch-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A3219B89D6C08D99CE47A21E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9F9D6CAF5F689628EBEEE2E8 /* Build configuration list for PBXProject "Jitouch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A12CAB54AEFF697119F5165A /* Debug */,
+				4E80549D6A768A752419CADF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F80E185DB0C217773AB29DCF /* Build configuration list for PBXNativeTarget "Jitouch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2EACAF02F705A13D8F52D7EB /* Debug */,
+				A3219B89D6C08D99CE47A21E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 16558E697FA6891847A9B8BA /* Project object */;
+}

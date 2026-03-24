@@ -1,0 +1,49 @@
+name: Jitouch
+options:
+  createIntermediateGroups: true
+  minimumXcodeGenVersion: 2.45.3
+settings:
+  base:
+    PRODUCT_NAME: Jitouch
+    PRODUCT_BUNDLE_IDENTIFIER: com.jitouch.Jitouch
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    SWIFT_VERSION: 6.0
+    MACOSX_DEPLOYMENT_TARGET: 15.0
+    GENERATE_INFOPLIST_FILE: NO
+    INFOPLIST_FILE: JitouchApp/Resources/Info.plist
+    APPLICATION_CATEGORY: public.app-category.utilities
+    SWIFT_OBJC_BRIDGING_HEADER: JitouchApp/Jitouch-Bridging-Header.h
+    FRAMEWORK_SEARCH_PATHS:
+      - $(inherited)
+      - /System/Library/PrivateFrameworks
+    OTHER_LDFLAGS:
+      - $(inherited)
+      - -weak_framework
+      - MultitouchSupport
+    CLANG_ENABLE_MODULES: YES
+    ENABLE_HARDENED_RUNTIME: YES
+    ENABLE_APP_SANDBOX: NO
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+targets:
+  Jitouch:
+    type: application
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: JitouchApp/App
+      - path: JitouchApp/Models
+      - path: JitouchApp/Services
+      - path: JitouchApp/Views
+    resources:
+      - path: JitouchApp/Resources
+        excludes:
+          - Info.plist
+schemes:
+  Jitouch:
+    build:
+      targets:
+        Jitouch: all
+    run:
+      config: Debug
