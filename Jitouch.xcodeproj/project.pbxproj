@@ -34,10 +34,12 @@
 		C00ADB7A592DB61F25560956 /* CommandFeedbackOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF42E69F84585557DAA8EBA /* CommandFeedbackOverlayController.swift */; };
 		CB24DF2306AF6F85E6F10443 /* TrackpadSwipeRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8852E51C8C98843B8A9EF817 /* TrackpadSwipeRecognizer.swift */; };
 		D1B4BBB4F913F85AD3DE15EF /* JitouchAppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FF53B21A89EF71D6A2B1E1D /* JitouchAppModel.swift */; };
+		D266EEA38CC3D75FD59C67AE /* JitouchChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE52F7B6AA83E18D2962DCC7 /* JitouchChrome.swift */; };
 		D32EBB628B59E2CD5EC05B15 /* JitouchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFF564E52A9083C2B870724B /* JitouchApp.swift */; };
 		DF23CF902B625F831A7548FA /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94F02468712B3FA6FB8DBA33 /* AppSettings.swift */; };
 		DFD831379C0978927592FC62 /* MagicMouseRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67F97A66A466E1B2C6D046C9 /* MagicMouseRecognizer.swift */; };
 		E4207FFE03D8D187D72C85FD /* TrackpadTabSwitchRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09145296A5CBF5F3FA519152 /* TrackpadTabSwitchRecognizer.swift */; };
+		E57D613C28B7700C72395F77 /* ShortcutRecorderField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 926B9024B81623A687AADF27 /* ShortcutRecorderField.swift */; };
 		E6115BF1F204C621DEA1027B /* LaunchAtLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B9C27E1038FE49AC4C5B05 /* LaunchAtLoginService.swift */; };
 		F70EADC8684486E441FD778B /* CommandCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BDFB0DE08AFBD12312FBC9 /* CommandCatalog.swift */; };
 		FDA4B4812BF1F168A07166A4 /* TrackpadCharacterRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6035F20802AA9551ECA1B896 /* TrackpadCharacterRecognizer.swift */; };
@@ -61,12 +63,14 @@
 		820EE8490CA6A0A6410CD9F1 /* TouchModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchModels.swift; sourceTree = "<group>"; };
 		840D59D714EBAC53A2A0820F /* LegacySettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacySettingsStore.swift; sourceTree = "<group>"; };
 		8852E51C8C98843B8A9EF817 /* TrackpadSwipeRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadSwipeRecognizer.swift; sourceTree = "<group>"; };
+		926B9024B81623A687AADF27 /* ShortcutRecorderField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRecorderField.swift; sourceTree = "<group>"; };
 		94F02468712B3FA6FB8DBA33 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		A1FC6E67190B581D9CE1BAFE /* KeyboardSimulationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardSimulationService.swift; sourceTree = "<group>"; };
 		A98924FCF2ACC4A3C53F7B9E /* CharacterRecognitionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterRecognitionEngine.swift; sourceTree = "<group>"; };
 		AA38B19070FA42BBD95238B0 /* DeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
 		AAF42E69F84585557DAA8EBA /* CommandFeedbackOverlayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandFeedbackOverlayController.swift; sourceTree = "<group>"; };
 		AE4CD35A0AD618E0E46D4277 /* CharacterRecognitionOverlayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterRecognitionOverlayController.swift; sourceTree = "<group>"; };
+		AE52F7B6AA83E18D2962DCC7 /* JitouchChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JitouchChrome.swift; sourceTree = "<group>"; };
 		AFF564E52A9083C2B870724B /* JitouchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JitouchApp.swift; sourceTree = "<group>"; };
 		CD17B58C57E3008293B499D0 /* TrackpadFixFingerRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadFixFingerRecognizer.swift; sourceTree = "<group>"; };
 		D0BDFB0DE08AFBD12312FBC9 /* CommandCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandCatalog.swift; sourceTree = "<group>"; };
@@ -165,8 +169,10 @@
 		D5E78C3074C65C9931078DCF /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				AE52F7B6AA83E18D2962DCC7 /* JitouchChrome.swift */,
 				5DD8EDB6D3DAFC258C4B60F6 /* MenuBarContentView.swift */,
 				D8A3DD7ED92A4383D585FE67 /* SettingsRootView.swift */,
+				926B9024B81623A687AADF27 /* ShortcutRecorderField.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -253,6 +259,7 @@
 				1C583D654DFB8690B75FD966 /* GestureRecognizerProtocol.swift in Sources */,
 				D32EBB628B59E2CD5EC05B15 /* JitouchApp.swift in Sources */,
 				D1B4BBB4F913F85AD3DE15EF /* JitouchAppModel.swift in Sources */,
+				D266EEA38CC3D75FD59C67AE /* JitouchChrome.swift in Sources */,
 				9D095554F59C16104AB55F89 /* JitouchSyntheticEventMarkers.swift in Sources */,
 				0668AF204C84AEBFCC6AF9E7 /* KeyboardSimulationService.swift in Sources */,
 				E6115BF1F204C621DEA1027B /* LaunchAtLoginService.swift in Sources */,
@@ -262,6 +269,7 @@
 				128FF61EA82550D439F7BFC2 /* MenuBarContentView.swift in Sources */,
 				91AACAC14288A510EED73EC5 /* MoveResizeOverlayController.swift in Sources */,
 				BFD45DE45086877148D7B7F4 /* SettingsRootView.swift in Sources */,
+				E57D613C28B7700C72395F77 /* ShortcutRecorderField.swift in Sources */,
 				0EA656BB4785053CED683192 /* TouchModels.swift in Sources */,
 				FDA4B4812BF1F168A07166A4 /* TrackpadCharacterRecognizer.swift in Sources */,
 				1B0A45345094EEE241CFFB90 /* TrackpadFixFingerRecognizer.swift in Sources */,

@@ -12,6 +12,7 @@ struct JitouchApp: App {
                 .environment(appModel.eventTapManager)
                 .environment(appModel.commandExecutor)
         }
+        .menuBarExtraStyle(.window)
 
         Settings {
             SettingsRootView()
