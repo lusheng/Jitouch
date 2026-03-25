@@ -2,7 +2,16 @@ import SwiftUI
 
 @main
 struct JitouchApp: App {
-    @State private var appModel = JitouchAppModel()
+    @State private var appModel: JitouchAppModel
+
+    init() {
+        let model = JitouchAppModel()
+        _appModel = State(initialValue: model)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            model.performLaunchSetupRevealIfNeeded()
+        }
+    }
 
     var body: some Scene {
         MenuBarExtra("Jitouch", systemImage: appModel.menuBarSymbolName) {

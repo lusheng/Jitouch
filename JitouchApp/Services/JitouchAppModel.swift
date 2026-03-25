@@ -25,6 +25,7 @@ final class JitouchAppModel {
     private(set) var isOnboardingPresented = false
 
     private var hasAttemptedAutomaticOnboarding = false
+    private var hasPerformedLaunchSetupReveal = false
 
     init(
         settingsStore: LegacySettingsStore = LegacySettingsStore(),
@@ -219,6 +220,25 @@ final class JitouchAppModel {
         isOnboardingPresented = true
     }
 
+    func performLaunchSetupRevealIfNeeded() {
+        guard !hasPerformedLaunchSetupReveal else { return }
+        guard !settings.hasCompletedOnboarding, !settings.hasDismissedOnboarding else { return }
+
+        hasPerformedLaunchSetupReveal = true
+        presentOnboarding()
+
+        NSApp.activate(ignoringOtherApps: true)
+
+        // The Settings scene is not always ready the very first moment the app
+        // launches, so we nudge it open twice with a short gap.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            self?.openSettingsWindow()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { [weak self] in
+            self?.openSettingsWindow()
+        }
+    }
+
     func presentOnboarding() {
         settings.hasDismissedOnboarding = false
         isOnboardingPresented = true
@@ -244,6 +264,7 @@ final class JitouchAppModel {
         settings.hasCompletedOnboarding = false
         settings.hasDismissedOnboarding = false
         hasAttemptedAutomaticOnboarding = false
+        hasPerformedLaunchSetupReveal = false
         persist()
     }
 
