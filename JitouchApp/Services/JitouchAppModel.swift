@@ -27,6 +27,7 @@ final class JitouchAppModel {
 
     private var hasAttemptedAutomaticOnboarding = false
     private var hasPerformedLaunchSetupReveal = false
+    private var settingsWindowPresenter: (() -> Void)?
 
     init(
         settingsStore: LegacySettingsStore = LegacySettingsStore(),
@@ -207,9 +208,38 @@ final class JitouchAppModel {
         launchAtLoginService.openSystemSettings()
     }
 
+    func installSettingsWindowPresenter(_ presenter: @escaping () -> Void) {
+        settingsWindowPresenter = presenter
+    }
+
     func openSettingsWindow() {
+        if let settingsWindowPresenter {
+            NSApp.activate(ignoringOtherApps: true)
+            settingsWindowPresenter()
+            return
+        }
+
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        let selectors = [
+            Selector(("showSettingsWindow:")),
+            Selector(("showPreferencesWindow:")),
+            Selector(("showSettings:")),
+        ]
+
+        let openedImmediately = selectors.contains { selector in
+            NSApp.sendAction(selector, to: nil, from: nil)
+        }
+
+        if !openedImmediately {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                NSApp.activate(ignoringOtherApps: true)
+                for selector in selectors {
+                    if NSApp.sendAction(selector, to: nil, from: nil) {
+                        break
+                    }
+                }
+            }
+        }
     }
 
     func openSettingsPane(_ pane: JitouchSettingsPane) {

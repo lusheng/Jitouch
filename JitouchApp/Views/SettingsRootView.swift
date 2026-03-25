@@ -160,7 +160,7 @@ struct SettingsRootView: View {
         } detail: {
             detailPane
         }
-        .navigationSplitViewColumnWidth(min: 220, ideal: 250)
+        .navigationSplitViewColumnWidth(min: 288, ideal: 312, max: 344)
         .frame(minWidth: 1040, minHeight: 720)
         .sheet(isPresented: onboardingPresentedBinding) {
             OnboardingFlowView()
@@ -176,20 +176,90 @@ struct SettingsRootView: View {
     }
 
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 18) {
             sidebarHeader
 
-            List(selection: $selectedPane) {
-                ForEach(JitouchSettingsPane.allCases) { pane in
-                    Label(pane.title, systemImage: pane.symbolName)
-                        .tag(Optional(pane))
+            Text("SETTINGS")
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(0.8)
+                .foregroundStyle(.tertiary)
+                .padding(.horizontal, 10)
+
+            sidebarNavigationSurface
+
+            Spacer(minLength: 0)
+
+            sidebarFooter
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(settingsSidebarBackground)
+    }
+
+    private func sidebarButton(for pane: JitouchSettingsPane) -> some View {
+        let isSelected = selectedPane == pane
+
+        return Button {
+            selectedPane = pane
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.white.opacity(0.58))
+
+                    Image(systemName: pane.symbolName)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                }
+                .frame(width: 30, height: 30)
+
+                VStack(alignment: .leading, spacing: isSelected ? 4 : 2) {
+                    Text(pane.title)
+                        .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if isSelected {
+                        Text(pane.subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
+
+                if isSelected {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 6, height: 6)
+                        .padding(.top, 7)
                 }
             }
-            .listStyle(.sidebar)
+            .padding(.horizontal, 12)
+            .padding(.vertical, isSelected ? 12 : 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(isSelected ? Color.white.opacity(0.92) : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(isSelected ? Color.black.opacity(0.05) : Color.clear, lineWidth: 1)
+            )
+            .shadow(
+                color: isSelected ? Color.black.opacity(0.025) : Color.clear,
+                radius: 8,
+                x: 0,
+                y: 4
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color(nsColor: .underPageBackgroundColor))
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -233,20 +303,27 @@ struct SettingsRootView: View {
                 .frame(width: 42, height: 42)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Jitouch")
-                        .font(.headline)
-                    Text("Modernization Preview")
+                    Text("Jitouch Settings")
+                        .font(.title3.weight(.semibold))
+                    Text("Standalone gesture utility")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+
+                Spacer(minLength: 0)
             }
 
-            Text("Standalone Swift app for Tahoe-era macOS, with editable profiles and a pure Swift migration path.")
+            JitouchStatusBadge(
+                title: appModel.settings.isEnabled ? "Active" : "Paused",
+                tint: appModel.settings.isEnabled ? .green : .orange
+            )
+
+            Text("Clean, app-first controls for the Swift rewrite.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .padding(.leading, 2)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(14)
-        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private var overviewPane: some View {
@@ -255,10 +332,10 @@ struct SettingsRootView: View {
             subtitle: JitouchSettingsPane.overview.subtitle
         ) {
             overviewHero
-            onboardingGuideCard
             overviewMetrics
-            setupChecklist
             quickActionsCard
+            onboardingGuideCard
+            setupChecklist
             generalSettings
             commandCoverage
 
@@ -336,72 +413,64 @@ struct SettingsRootView: View {
                 pageHeader(title: title, subtitle: subtitle)
                 content()
             }
-            .padding(24)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: 980, alignment: .leading)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 28)
+            .frame(maxWidth: .infinity, alignment: .center)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(settingsDetailBackground)
     }
 
     private func pageHeader(title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.largeTitle.weight(.semibold))
 
             Text(subtitle)
+                .font(.callout)
                 .foregroundStyle(.secondary)
         }
     }
 
     private var overviewHero: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 18) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(appModel.settings.isEnabled ? "Gesture Engine Ready" : "Jitouch Is Paused")
-                        .font(.title2.weight(.semibold))
-
-                    Text("The standalone app now owns device monitoring, event taps, command execution, editable profiles, and character diagnostics. What still needs real-world tuning is mostly feel, thresholds, and hardware-specific behavior.")
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 8) {
-                    Text(appModel.settings.isEnabled ? "Active" : "Paused")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 5)
-                        .background(
-                            appModel.settings.isEnabled ? Color.green.opacity(0.16) : Color.orange.opacity(0.16),
-                            in: Capsule()
-                        )
-                        .foregroundStyle(appModel.settings.isEnabled ? .green : .orange)
-
-                    Text(appModel.runtimeStatusSummary)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+        JitouchSurfaceCard(
+            title: appModel.settings.isEnabled ? "Gesture Engine Ready" : "Jitouch Is Paused",
+            subtitle: "The standalone Swift app now owns device hooks, event taps, editable profiles, and recognition diagnostics. What remains is mostly real-world tuning.",
+            symbol: appModel.menuBarSymbolName,
+            tint: appModel.settings.isEnabled ? .green : .orange,
+            accessory: {
+                JitouchStatusBadge(
+                    title: appModel.settings.isEnabled ? "Active" : "Paused",
+                    tint: appModel.settings.isEnabled ? .green : .orange
+                )
+            }
+        ) {
+            HStack(spacing: 14) {
+                JitouchInlineMetric(
+                    label: "Runtime",
+                    value: eventTapManager.isRunning ? "Ready" : "Needs Attention",
+                    tint: eventTapManager.isRunning ? .green : .orange
+                )
+                JitouchInlineMetric(
+                    label: "Devices",
+                    value: "\(deviceManager.totalDeviceCount)",
+                    tint: .mint
+                )
+                JitouchInlineMetric(
+                    label: "Focused App",
+                    value: commandExecutor.activeApplicationDisplayName,
+                    tint: .blue
+                )
             }
         }
-        .padding(20)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 0.94, green: 0.97, blue: 1.00),
-                    Color(red: 0.92, green: 0.99, blue: 0.97),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
-        )
     }
 
     private var onboardingGuideCard: some View {
         JitouchSurfaceCard(
-            title: appModel.settings.hasCompletedOnboarding ? "Setup Guide" : "Finish Setup",
+            title: "Setup Guide",
             subtitle: appModel.settings.hasCompletedOnboarding
-                ? "The guided setup can be reopened any time if you want a quick sanity pass after more refactor work."
-                : "A short guided setup now walks through permission, startup behavior, and device readiness instead of making you hunt across the whole settings UI.",
+                ? "Reopen the guide any time if you want a quick readiness pass."
+                : "Walk through permissions, startup behavior, and device readiness in one place.",
             symbol: "figure.walk.motion",
             tint: appModel.settings.hasCompletedOnboarding ? .blue : .green,
             accessory: {
@@ -528,7 +597,7 @@ struct SettingsRootView: View {
     private var quickActionsCard: some View {
         JitouchSurfaceCard(
             title: "Quick Actions",
-            subtitle: "Useful maintenance and recovery actions that would otherwise send you hunting through multiple panels.",
+            subtitle: "The most useful recovery and maintenance controls, without digging through multiple pages.",
             symbol: "bolt.circle",
             tint: .blue
         ) {
@@ -2093,6 +2162,69 @@ struct SettingsRootView: View {
                 command.openURL = nil
                 commandBinding.wrappedValue = command
             }
+        )
+    }
+
+    private var settingsSidebarBackground: some View {
+        LinearGradient(
+            colors: [
+                Color(red: 0.973, green: 0.977, blue: 0.984),
+                Color(red: 0.962, green: 0.967, blue: 0.976),
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    private var settingsSidebarSurface: Color {
+        Color.white.opacity(0.54)
+    }
+
+    private var settingsDetailBackground: some View {
+        LinearGradient(
+            colors: [
+                Color(red: 0.987, green: 0.989, blue: 0.994),
+                Color(red: 0.978, green: 0.982, blue: 0.989),
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    private var sidebarNavigationSurface: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(JitouchSettingsPane.allCases) { pane in
+                sidebarButton(for: pane)
+            }
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(settingsSidebarSurface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.4), lineWidth: 1)
+        )
+    }
+
+    private var sidebarFooter: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Runtime")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            Text(appModel.runtimeStatusSummary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.42))
         )
     }
 }

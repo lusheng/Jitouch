@@ -32,6 +32,7 @@
 		A4C400DB90A17C3C27A39AA4 /* CommandExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D92D27573BB3660084D73E07 /* CommandExecutor.swift */; };
 		A987BA219B679C5A78BF488A /* CommandModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 699024737AFA1117DFB7A230 /* CommandModels.swift */; };
 		ABEC57FAD763B74FCBC3B359 /* EventTapManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD9A734BDD56D1680EFB84C9 /* EventTapManager.swift */; };
+		AF2D1173DF1AD6EFEADC4DCF /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 307BB5527F927A9892D4992E /* SettingsWindowController.swift */; };
 		BFD45DE45086877148D7B7F4 /* SettingsRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8A3DD7ED92A4383D585FE67 /* SettingsRootView.swift */; };
 		C00ADB7A592DB61F25560956 /* CommandFeedbackOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF42E69F84585557DAA8EBA /* CommandFeedbackOverlayController.swift */; };
 		CB24DF2306AF6F85E6F10443 /* TrackpadSwipeRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8852E51C8C98843B8A9EF817 /* TrackpadSwipeRecognizer.swift */; };
@@ -57,6 +58,7 @@
 		28B9C27E1038FE49AC4C5B05 /* LaunchAtLoginService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginService.swift; sourceTree = "<group>"; };
 		28D890ED669543A6748A6065 /* TrackpadGestureContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadGestureContext.swift; sourceTree = "<group>"; };
 		2A2BA40362D31EB58D79888B /* MoveResizeOverlayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoveResizeOverlayController.swift; sourceTree = "<group>"; };
+		307BB5527F927A9892D4992E /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		3159951C1D10FD8C69B03532 /* TrackpadPinchRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadPinchRecognizer.swift; sourceTree = "<group>"; };
 		48A79EAF1F53A7D325A17301 /* SettingsNavigationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsNavigationModels.swift; sourceTree = "<group>"; };
 		510CFD51D0FC0BA4D946BFAB /* CharacterRecognitionDiagnosticsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterRecognitionDiagnosticsStore.swift; sourceTree = "<group>"; };
@@ -128,6 +130,7 @@
 			isa = PBXGroup;
 			children = (
 				AFF564E52A9083C2B870724B /* JitouchApp.swift */,
+				307BB5527F927A9892D4992E /* SettingsWindowController.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -281,6 +284,7 @@
 				86EFDC5F931FA3506AA958CB /* OnboardingModels.swift in Sources */,
 				F4DA2AEDF77E1177C0AE790F /* SettingsNavigationModels.swift in Sources */,
 				BFD45DE45086877148D7B7F4 /* SettingsRootView.swift in Sources */,
+				AF2D1173DF1AD6EFEADC4DCF /* SettingsWindowController.swift in Sources */,
 				E57D613C28B7700C72395F77 /* ShortcutRecorderField.swift in Sources */,
 				0EA656BB4785053CED683192 /* TouchModels.swift in Sources */,
 				FDA4B4812BF1F168A07166A4 /* TrackpadCharacterRecognizer.swift in Sources */,
@@ -347,6 +351,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
+				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -423,6 +428,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
+				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;

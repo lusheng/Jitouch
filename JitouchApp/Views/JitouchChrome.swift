@@ -41,15 +41,15 @@ struct JitouchSurfaceCard<Content: View, Accessory: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top, spacing: 12) {
                 if let symbol {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(tint.opacity(0.14))
+                            .fill(tint.opacity(0.12))
 
                         Image(systemName: symbol)
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(tint)
                     }
                     .frame(width: 36, height: 36)
@@ -57,11 +57,11 @@ struct JitouchSurfaceCard<Content: View, Accessory: View>: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.headline)
+                        .font(.title3.weight(.semibold))
 
                     if let subtitle, !subtitle.isEmpty {
                         Text(subtitle)
-                            .font(.subheadline)
+                            .font(.callout)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -73,17 +73,17 @@ struct JitouchSurfaceCard<Content: View, Accessory: View>: View {
 
             content
         }
-        .padding(18)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.96))
+                .fill(Color.white.opacity(0.92))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                .strokeBorder(Color.black.opacity(0.045), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.04), radius: 14, x: 0, y: 6)
+        .shadow(color: Color.black.opacity(0.02), radius: 8, x: 0, y: 3)
     }
 }
 
@@ -109,20 +109,20 @@ struct JitouchMetricTile: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             ZStack {
-                Circle()
-                    .fill(tint.opacity(0.14))
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(tint.opacity(0.11))
 
                 Image(systemName: symbol)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(tint)
             }
-            .frame(width: 28, height: 28)
+            .frame(width: 30, height: 30)
 
             Text(value)
-                .font(.headline)
-                .lineLimit(2)
+                .font(.title3.weight(.semibold))
+                .lineLimit(3)
 
             Text(title)
                 .font(.caption.weight(.semibold))
@@ -136,14 +136,14 @@ struct JitouchMetricTile: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(nsColor: .windowBackgroundColor))
+                .fill(Color.white.opacity(0.82))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                .strokeBorder(Color.black.opacity(0.04), lineWidth: 1)
         )
     }
 }
@@ -156,8 +156,34 @@ struct JitouchStatusBadge: View {
         Text(title)
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 10)
-            .padding(.vertical, 4)
+            .padding(.vertical, 5)
             .background(tint.opacity(0.16), in: Capsule())
             .foregroundStyle(tint)
+    }
+}
+
+struct JitouchInlineMetric: View {
+    let label: String
+    let value: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(tint.opacity(0.08))
+        )
     }
 }

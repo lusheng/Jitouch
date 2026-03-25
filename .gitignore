@@ -4,6 +4,7 @@
 xcuserdata/
 *.xcworkspace/
 DerivedData/
+# Repo-local Xcode build output
 build/
 *.pbxuser
 *.mode1v3
