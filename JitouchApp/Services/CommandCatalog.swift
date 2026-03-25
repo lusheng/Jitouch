@@ -1,5 +1,12 @@
 import Foundation
 
+struct ActionCommandGroup: Identifiable, Sendable {
+    let title: String
+    let commands: [String]
+
+    var id: String { title }
+}
+
 enum CommandCatalog {
     static let supportedActionCommands: [String] = [
         "-",
@@ -47,6 +54,74 @@ enum CommandCatalog {
     ]
 
     static let allUnassignedGesture = "All Unassigned Gestures"
+
+    static let actionCommandGroups: [ActionCommandGroup] = [
+        ActionCommandGroup(
+            title: "Tabs & Navigation",
+            commands: [
+                "Next Tab",
+                "Previous Tab",
+                "New Tab",
+                "Open Link in New Tab",
+                "Open Recently Closed Tab",
+                "Refresh",
+                "Scroll to Top",
+                "Scroll to Bottom",
+            ]
+        ),
+        ActionCommandGroup(
+            title: "Windows & System",
+            commands: [
+                "Move / Resize",
+                "Show Desktop",
+                "Application Windows",
+                "Mission Control",
+                "Launchpad",
+                "Full Screen",
+                "Minimize",
+                "Zoom",
+                "Maximize",
+                "Maximize Left",
+                "Maximize Right",
+                "Un-Maximize",
+            ]
+        ),
+        ActionCommandGroup(
+            title: "Editing & App Control",
+            commands: [
+                "Copy",
+                "Paste",
+                "New",
+                "Open",
+                "Save",
+                "Close / Close Tab",
+                "Hide",
+                "Quit",
+                "Launch Finder",
+                "Launch Browser",
+                "Application Switcher",
+            ]
+        ),
+        ActionCommandGroup(
+            title: "Clicks & Media",
+            commands: [
+                "Left Click",
+                "Right Click",
+                "Middle Click",
+                "Play / Pause",
+                "Next",
+                "Previous",
+                "Volume Up",
+                "Volume Down",
+                "Brightness Up",
+                "Brightness Down",
+            ]
+        ),
+        ActionCommandGroup(
+            title: "Unassigned",
+            commands: ["-"]
+        ),
+    ]
 
     static let trackpadGestureOptions: [String] = [
         "Three-Finger Tap",
@@ -196,6 +271,29 @@ enum CommandCatalog {
             magicMouseGestureOptions
         case .recognition:
             CharacterRecognitionEngine.supportedCharacterValues
+        }
+    }
+
+    static func recommendedActions(for device: CommandDevice, gesture: String) -> [String] {
+        switch device {
+        case .trackpad:
+            if gesture.contains("Swipe") {
+                return ["Mission Control", "Show Desktop", "Next Tab", "Previous Tab", "Application Windows", "Launchpad"]
+            }
+            if gesture.contains("Pinch") || gesture.contains("Fix") {
+                return ["Move / Resize", "Refresh", "Close / Close Tab", "Quit", "Maximize", "Minimize"]
+            }
+            return ["Middle Click", "Next Tab", "Previous Tab", "Move / Resize", "Refresh", "Mission Control"]
+        case .magicMouse:
+            if gesture.contains("Swipe") {
+                return ["Show Desktop", "Mission Control", "Application Windows", "Next Tab", "Previous Tab", "Launchpad"]
+            }
+            if gesture.contains("Thumb") || gesture.contains("V-Shape") {
+                return ["Move / Resize", "Application Switcher", "Mission Control", "Show Desktop", "Middle Click", "Right Click"]
+            }
+            return ["Middle Click", "Next Tab", "Previous Tab", "Refresh", "Close / Close Tab", "Move / Resize"]
+        case .recognition:
+            return ["Launch Browser", "Launch Finder", "New", "Open", "Save", "New Tab"]
         }
     }
 }

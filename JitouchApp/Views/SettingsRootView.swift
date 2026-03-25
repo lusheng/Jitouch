@@ -1192,30 +1192,91 @@ struct SettingsRootView: View {
         let command = commandBinding.wrappedValue
 
         return VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                Toggle(gesture, isOn: gestureEnabledBinding(commandBinding))
-                    .toggleStyle(.checkbox)
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(gesture)
+                        .font(.headline)
+
+                    Text(commandSummary(command))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
                 Spacer()
 
-                Picker("Type", selection: gestureCommandKindBinding(commandBinding)) {
-                    ForEach(GestureCommandKind.allCases) { kind in
-                        Text(kind.title).tag(kind)
-                    }
-                }
-                .pickerStyle(.menu)
-                .frame(width: 150)
+                Toggle("Enabled", isOn: gestureEnabledBinding(commandBinding))
+                    .controlSize(.small)
             }
+
+            Picker("Type", selection: gestureCommandKindBinding(commandBinding)) {
+                ForEach(GestureCommandKind.allCases) { kind in
+                    Text(kind.title).tag(kind)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            Text(commandKindDescription(command.commandKind))
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             switch command.commandKind {
             case .action:
-                Picker("Action", selection: gestureActionBinding(commandBinding)) {
-                    ForEach(CommandCatalog.supportedActionCommands, id: \.self) { action in
-                        Text(action).tag(action)
+                VStack(alignment: .leading, spacing: 12) {
+                    let recommendedActions = CommandCatalog.recommendedActions(for: device, gesture: gesture)
+
+                    if !recommendedActions.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Suggested")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
+                                ForEach(recommendedActions, id: \.self) { action in
+                                    Button {
+                                        gestureActionBinding(commandBinding).wrappedValue = action
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: action == command.command ? "checkmark.circle.fill" : "circle")
+                                                .foregroundStyle(action == command.command ? .blue : .secondary)
+                                            Text(action)
+                                                .lineLimit(1)
+                                            Spacer(minLength: 0)
+                                        }
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 8)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(action == command.command ? Color.blue.opacity(0.10) : Color(nsColor: .windowBackgroundColor))
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .strokeBorder(action == command.command ? Color.blue.opacity(0.35) : Color.primary.opacity(0.05), lineWidth: 1)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Picker("All Actions", selection: gestureActionBinding(commandBinding)) {
+                        ForEach(CommandCatalog.actionCommandGroups) { group in
+                            Section(group.title) {
+                                ForEach(group.commands, id: \.self) { action in
+                                    Text(action == "-" ? "No Action" : action).tag(action)
+                                }
+                            }
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    if command.command != "-" {
+                        Text("Selected action: \(command.command)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
-                .pickerStyle(.menu)
-                .labelsHidden()
             case .shortcut:
                 VStack(alignment: .leading, spacing: 8) {
                     ShortcutRecorderField(
@@ -1228,21 +1289,61 @@ struct SettingsRootView: View {
                         .foregroundStyle(.secondary)
                 }
             case .openURL:
-                TextField(
-                    "https://example.com",
-                    text: gestureOpenURLBinding(commandBinding)
-                )
-                .textFieldStyle(.roundedBorder)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 10) {
+                        TextField(
+                            "https://example.com",
+                            text: gestureOpenURLBinding(commandBinding)
+                        )
+                        .textFieldStyle(.roundedBorder)
+
+                        Button("Open Test URL") {
+                            openURLPreview(command.openURL ?? "")
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(!isValidURL(command.openURL ?? ""))
+                    }
+
+                    Text("Use a full URL including the scheme. This is useful for dashboards, docs, or deep links you want under a gesture.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             case .openFile:
-                TextField(
-                    "/Applications/Safari.app",
-                    text: gestureOpenFilePathBinding(commandBinding)
-                )
-                .textFieldStyle(.roundedBorder)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 10) {
+                        TextField(
+                            "/Applications/Safari.app",
+                            text: gestureOpenFilePathBinding(commandBinding)
+                        )
+                        .textFieldStyle(.roundedBorder)
+
+                        Button("Browse…") {
+                            if let selectedPath = chooseOpenFilePath(currentPath: command.openFilePath ?? "") {
+                                gestureOpenFilePathBinding(commandBinding).wrappedValue = selectedPath
+                            }
+                        }
+                        .buttonStyle(.bordered)
+
+                        if let path = command.openFilePath, !path.isEmpty {
+                            Button("Reveal") {
+                                revealFilePath(path)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+
+                    Text("Point the gesture at an app, document, or script on disk. `Browse…` is usually faster than pasting full paths.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
-        .padding(12)
-        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(14)
+        .background(Color(nsColor: .quaternaryLabelColor).opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+        )
     }
 
     private func commandSample(
@@ -1404,6 +1505,80 @@ struct SettingsRootView: View {
         case .recognition:
             "Search characters or recognition commands"
         }
+    }
+
+    private func commandSummary(_ command: GestureCommand) -> String {
+        let summary: String
+        switch command.commandKind {
+        case .action:
+            summary = command.command == "-" ? "No action selected" : command.command
+        case .shortcut:
+            summary = ShortcutFormatter.displayName(keyCode: command.keyCode, modifierFlags: command.modifierFlags)
+        case .openURL:
+            summary = (command.openURL?.isEmpty == false) ? command.openURL! : "No URL selected"
+        case .openFile:
+            if let path = command.openFilePath, !path.isEmpty {
+                summary = URL(fileURLWithPath: path).lastPathComponent
+            } else {
+                summary = "No file selected"
+            }
+        }
+
+        return command.isEnabled ? summary : "Disabled • \(summary)"
+    }
+
+    private func commandKindDescription(_ kind: GestureCommandKind) -> String {
+        switch kind {
+        case .action:
+            "Run one of Jitouch's built-in actions like Mission Control, tab switching, clicks, or window management."
+        case .shortcut:
+            "Send a keyboard shortcut exactly as if you pressed it on the keyboard."
+        case .openURL:
+            "Open a web page or app deep link using a full URL."
+        case .openFile:
+            "Open an app, document, or script from disk."
+        }
+    }
+
+    private func isValidURL(_ string: String) -> Bool {
+        guard let url = URL(string: string), let scheme = url.scheme, !scheme.isEmpty else {
+            return false
+        }
+        return true
+    }
+
+    private func openURLPreview(_ string: String) {
+        guard let url = URL(string: string) else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    private func chooseOpenFilePath(currentPath: String) -> String? {
+        let panel = NSOpenPanel()
+        panel.title = "Choose File or Application"
+        panel.prompt = "Use Path"
+        panel.message = "Pick an app, document, or script to launch from this gesture."
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+
+        if !currentPath.isEmpty {
+            let currentURL = URL(fileURLWithPath: currentPath).standardizedFileURL
+            var isDirectory: ObjCBool = false
+            if FileManager.default.fileExists(atPath: currentURL.path, isDirectory: &isDirectory) {
+                panel.directoryURL = isDirectory.boolValue ? currentURL : currentURL.deletingLastPathComponent()
+            }
+        }
+
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return nil
+        }
+
+        return url.standardizedFileURL.path
+    }
+
+    private func revealFilePath(_ path: String) {
+        let url = URL(fileURLWithPath: path).standardizedFileURL
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     private func liveDiagnostics(_ snapshot: CharacterRecognitionDiagnosticSnapshot) -> some View {

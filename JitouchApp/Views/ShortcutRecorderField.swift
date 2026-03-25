@@ -100,7 +100,7 @@ struct ShortcutRecorderField: View {
     }
 }
 
-private enum ShortcutFormatter {
+enum ShortcutFormatter {
     static func displayName(keyCode: Int, modifierFlags: Int) -> String {
         guard keyCode != 0 || modifierFlags != 0 else {
             return "Record Shortcut"
