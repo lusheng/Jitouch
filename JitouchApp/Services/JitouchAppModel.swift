@@ -461,6 +461,19 @@ final class JitouchAppModel {
         persist()
     }
 
+    func resetApplicationOverrideToDefault(for device: CommandDevice, setID: String) {
+        guard setID != "All Applications" else { return }
+
+        let defaultGestures = commandSets(for: device)
+            .first(where: { $0.path.isEmpty })?
+            .gestures ?? []
+
+        mutateCommandSet(for: device, setID: setID) { set in
+            set.gestures = defaultGestures
+        }
+        persist()
+    }
+
     func restartRuntimeServices() {
         deviceManager.restart()
         restartEventTap()
