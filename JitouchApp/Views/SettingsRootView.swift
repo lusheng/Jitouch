@@ -1,75 +1,13 @@
 import AppKit
 import SwiftUI
 
-private enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
-    case overview
-    case permissions
-    case trackpad
-    case magicMouse
-    case recognition
-    case diagnostics
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .overview:
-            "Overview"
-        case .permissions:
-            "Permissions & Startup"
-        case .trackpad:
-            "Trackpad"
-        case .magicMouse:
-            "Magic Mouse"
-        case .recognition:
-            "Character Recognition"
-        case .diagnostics:
-            "Diagnostics"
-        }
-    }
-
-    var subtitle: String {
-        switch self {
-        case .overview:
-            "Core status, controls, and migration progress."
-        case .permissions:
-            "Accessibility access, login items, and runtime readiness."
-        case .trackpad:
-            "Trackpad gesture profiles and per-app overrides."
-        case .magicMouse:
-            "Magic Mouse gesture profiles and per-app overrides."
-        case .recognition:
-            "Drawing recognition controls, mappings, and button behavior."
-        case .diagnostics:
-            "Calibration, device state, and debugging visibility."
-        }
-    }
-
-    var symbolName: String {
-        switch self {
-        case .overview:
-            "square.grid.2x2"
-        case .permissions:
-            "lock.shield"
-        case .trackpad:
-            "rectangle.and.hand.point.up.left"
-        case .magicMouse:
-            "mouse"
-        case .recognition:
-            "character.cursor.ibeam"
-        case .diagnostics:
-            "waveform.path.ecg"
-        }
-    }
-}
-
 struct SettingsRootView: View {
     @Environment(JitouchAppModel.self) private var appModel
     @Environment(DeviceManager.self) private var deviceManager
     @Environment(EventTapManager.self) private var eventTapManager
     @Environment(CommandExecutor.self) private var commandExecutor
 
-    @State private var selectedPane: SettingsPane? = .overview
+    @State private var selectedPane: JitouchSettingsPane? = .overview
     @State private var selectedTrackpadSetID = ""
     @State private var selectedMagicMouseSetID = ""
     @State private var selectedRecognitionSetID = ""
@@ -230,6 +168,10 @@ struct SettingsRootView: View {
         }
         .onAppear {
             appModel.maybePresentOnboarding()
+            selectedPane = appModel.preferredSettingsPane
+        }
+        .onChange(of: appModel.preferredSettingsPane) { _, newValue in
+            selectedPane = newValue
         }
     }
 
@@ -238,7 +180,7 @@ struct SettingsRootView: View {
             sidebarHeader
 
             List(selection: $selectedPane) {
-                ForEach(SettingsPane.allCases) { pane in
+                ForEach(JitouchSettingsPane.allCases) { pane in
                     Label(pane.title, systemImage: pane.symbolName)
                         .tag(Optional(pane))
                 }
@@ -309,8 +251,8 @@ struct SettingsRootView: View {
 
     private var overviewPane: some View {
         settingsPage(
-            title: SettingsPane.overview.title,
-            subtitle: SettingsPane.overview.subtitle
+            title: JitouchSettingsPane.overview.title,
+            subtitle: JitouchSettingsPane.overview.subtitle
         ) {
             overviewHero
             onboardingGuideCard
@@ -337,8 +279,8 @@ struct SettingsRootView: View {
 
     private var permissionsPane: some View {
         settingsPage(
-            title: SettingsPane.permissions.title,
-            subtitle: SettingsPane.permissions.subtitle
+            title: JitouchSettingsPane.permissions.title,
+            subtitle: JitouchSettingsPane.permissions.subtitle
         ) {
             permissionsAndStartup
         }
@@ -346,8 +288,8 @@ struct SettingsRootView: View {
 
     private var recognitionPane: some View {
         settingsPage(
-            title: SettingsPane.recognition.title,
-            subtitle: SettingsPane.recognition.subtitle
+            title: JitouchSettingsPane.recognition.title,
+            subtitle: JitouchSettingsPane.recognition.subtitle
         ) {
             recognitionSummaryCard
             characterRecognitionSettings
@@ -359,8 +301,8 @@ struct SettingsRootView: View {
 
     private var diagnosticsPane: some View {
         settingsPage(
-            title: SettingsPane.diagnostics.title,
-            subtitle: SettingsPane.diagnostics.subtitle
+            title: JitouchSettingsPane.diagnostics.title,
+            subtitle: JitouchSettingsPane.diagnostics.subtitle
         ) {
             diagnosticsSummaryCard
             characterRecognitionCalibration
@@ -370,7 +312,7 @@ struct SettingsRootView: View {
     }
 
     private func deviceConfigurationPane(for device: CommandDevice) -> some View {
-        let pane: SettingsPane = device == .trackpad ? .trackpad : .magicMouse
+        let pane: JitouchSettingsPane = device == .trackpad ? .trackpad : .magicMouse
 
         return settingsPage(
             title: pane.title,

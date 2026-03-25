@@ -23,6 +23,7 @@ final class JitouchAppModel {
     private(set) var legacyPreferencesFound: Bool
     private(set) var lastRecognizedGestureSummary = "No gestures recognized yet"
     private(set) var isOnboardingPresented = false
+    private(set) var preferredSettingsPane: JitouchSettingsPane = .overview
 
     private var hasAttemptedAutomaticOnboarding = false
     private var hasPerformedLaunchSetupReveal = false
@@ -209,6 +210,11 @@ final class JitouchAppModel {
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
+    func openSettingsPane(_ pane: JitouchSettingsPane) {
+        preferredSettingsPane = pane
+        openSettingsWindow()
+    }
+
     func maybePresentOnboarding() {
         guard !hasAttemptedAutomaticOnboarding else { return }
         hasAttemptedAutomaticOnboarding = true
@@ -241,6 +247,7 @@ final class JitouchAppModel {
 
     func presentOnboarding() {
         settings.hasDismissedOnboarding = false
+        preferredSettingsPane = .overview
         isOnboardingPresented = true
         persist()
     }
@@ -257,6 +264,7 @@ final class JitouchAppModel {
         settings.hasCompletedOnboarding = true
         settings.hasDismissedOnboarding = true
         isOnboardingPresented = false
+        preferredSettingsPane = .overview
         persist()
     }
 

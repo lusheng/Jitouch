@@ -196,6 +196,18 @@ struct OnboardingFlowView: View {
                     onboardingBullet("Confirm that your active input devices and profiles are turned on.")
                     onboardingBullet("Finish with a clear view of what is ready and what still needs real-hardware tuning.")
                 }
+
+                HStack(spacing: 12) {
+                    Button("Open Overview Page") {
+                        appModel.openSettingsPane(.overview)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Jump to Permissions") {
+                        appModel.openSettingsPane(.permissions)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
             }
         }
     }
@@ -234,6 +246,11 @@ struct OnboardingFlowView: View {
                     Button("Re-check Runtime") {
                         appModel.refresh()
                         appModel.restartRuntimeServices()
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Open Permissions Page") {
+                        appModel.openSettingsPane(.permissions)
                     }
                     .buttonStyle(.bordered)
                 }
@@ -276,6 +293,11 @@ struct OnboardingFlowView: View {
                         appModel.restartRuntimeServices()
                     }
                     .buttonStyle(.bordered)
+
+                    Button("Open Permissions Page") {
+                        appModel.openSettingsPane(.permissions)
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
 
                 Text("Debug builds can still show `Unavailable` or `Needs Approval` because macOS expects a properly signed app for the cleanest `SMAppService` path.")
@@ -337,6 +359,23 @@ struct OnboardingFlowView: View {
                     onboardingBullet("Validate character-recognition accuracy with the built-in diagnostics pane.")
                     onboardingBullet("Refine Move / Resize and overlay behavior until it feels closer to the legacy app.")
                 }
+
+                HStack(spacing: 12) {
+                    Button("Open Trackpad Page") {
+                        appModel.openSettingsPane(.trackpad)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Open Magic Mouse Page") {
+                        appModel.openSettingsPane(.magicMouse)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Open Recognition Page") {
+                        appModel.openSettingsPane(.recognition)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
             }
         }
     }
@@ -371,6 +410,30 @@ struct OnboardingFlowView: View {
                             }
                         }
                     }
+                }
+            }
+
+            JitouchSurfaceCard(
+                title: "Where To Go Next",
+                subtitle: "Use the setup guide as a launchpad into the parts of the new app you actually want to tune.",
+                symbol: "arrowshape.turn.up.right",
+                tint: .blue
+            ) {
+                HStack(spacing: 12) {
+                    Button("Open Overview") {
+                        appModel.openSettingsPane(.overview)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Open Diagnostics") {
+                        appModel.openSettingsPane(.diagnostics)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Open Trackpad") {
+                        appModel.openSettingsPane(.trackpad)
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
             }
         }

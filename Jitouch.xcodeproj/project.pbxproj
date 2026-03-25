@@ -43,6 +43,7 @@
 		E4207FFE03D8D187D72C85FD /* TrackpadTabSwitchRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09145296A5CBF5F3FA519152 /* TrackpadTabSwitchRecognizer.swift */; };
 		E57D613C28B7700C72395F77 /* ShortcutRecorderField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 926B9024B81623A687AADF27 /* ShortcutRecorderField.swift */; };
 		E6115BF1F204C621DEA1027B /* LaunchAtLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B9C27E1038FE49AC4C5B05 /* LaunchAtLoginService.swift */; };
+		F4DA2AEDF77E1177C0AE790F /* SettingsNavigationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48A79EAF1F53A7D325A17301 /* SettingsNavigationModels.swift */; };
 		F70EADC8684486E441FD778B /* CommandCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BDFB0DE08AFBD12312FBC9 /* CommandCatalog.swift */; };
 		FDA4B4812BF1F168A07166A4 /* TrackpadCharacterRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6035F20802AA9551ECA1B896 /* TrackpadCharacterRecognizer.swift */; };
 /* End PBXBuildFile section */
@@ -57,6 +58,7 @@
 		28D890ED669543A6748A6065 /* TrackpadGestureContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadGestureContext.swift; sourceTree = "<group>"; };
 		2A2BA40362D31EB58D79888B /* MoveResizeOverlayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoveResizeOverlayController.swift; sourceTree = "<group>"; };
 		3159951C1D10FD8C69B03532 /* TrackpadPinchRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadPinchRecognizer.swift; sourceTree = "<group>"; };
+		48A79EAF1F53A7D325A17301 /* SettingsNavigationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsNavigationModels.swift; sourceTree = "<group>"; };
 		510CFD51D0FC0BA4D946BFAB /* CharacterRecognitionDiagnosticsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterRecognitionDiagnosticsStore.swift; sourceTree = "<group>"; };
 		5DD8EDB6D3DAFC258C4B60F6 /* MenuBarContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContentView.swift; sourceTree = "<group>"; };
 		5FF53B21A89EF71D6A2B1E1D /* JitouchAppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JitouchAppModel.swift; sourceTree = "<group>"; };
@@ -136,6 +138,7 @@
 				94F02468712B3FA6FB8DBA33 /* AppSettings.swift */,
 				699024737AFA1117DFB7A230 /* CommandModels.swift */,
 				6860413F6A117C0FF082BE6A /* OnboardingModels.swift */,
+				48A79EAF1F53A7D325A17301 /* SettingsNavigationModels.swift */,
 				820EE8490CA6A0A6410CD9F1 /* TouchModels.swift */,
 			);
 			path = Models;
@@ -276,6 +279,7 @@
 				91AACAC14288A510EED73EC5 /* MoveResizeOverlayController.swift in Sources */,
 				88EA72D8DD38D6B15C7A256F /* OnboardingFlowView.swift in Sources */,
 				86EFDC5F931FA3506AA958CB /* OnboardingModels.swift in Sources */,
+				F4DA2AEDF77E1177C0AE790F /* SettingsNavigationModels.swift in Sources */,
 				BFD45DE45086877148D7B7F4 /* SettingsRootView.swift in Sources */,
 				E57D613C28B7700C72395F77 /* ShortcutRecorderField.swift in Sources */,
 				0EA656BB4785053CED683192 /* TouchModels.swift in Sources */,
