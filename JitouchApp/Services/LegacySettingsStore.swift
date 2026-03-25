@@ -27,6 +27,14 @@ struct LegacySettingsStore {
             from: rawDomain["launchAtLoginEnabled"],
             default: defaults.launchAtLoginEnabled
         )
+        settings.hasCompletedOnboarding = LegacyValue.bool(
+            from: rawDomain["modernOnboardingCompleted"],
+            default: defaults.hasCompletedOnboarding
+        )
+        settings.hasDismissedOnboarding = LegacyValue.bool(
+            from: rawDomain["modernOnboardingDismissed"],
+            default: defaults.hasDismissedOnboarding
+        )
         settings.clickSpeed = LegacyValue.double(from: rawDomain["ClickSpeed"], default: defaults.clickSpeed)
         settings.sensitivity = LegacyValue.double(from: rawDomain["Sensitivity"], default: defaults.sensitivity)
         settings.showMenuBarIcon = LegacyValue.bool(from: rawDomain["ShowIcon"], default: defaults.showMenuBarIcon)
@@ -97,6 +105,8 @@ struct LegacySettingsStore {
         var domain = loadRawDomain() ?? [:]
         domain["enAll"] = settings.isEnabled ? 1 : 0
         domain["launchAtLoginEnabled"] = settings.launchAtLoginEnabled ? 1 : 0
+        domain["modernOnboardingCompleted"] = settings.hasCompletedOnboarding ? 1 : 0
+        domain["modernOnboardingDismissed"] = settings.hasDismissedOnboarding ? 1 : 0
         domain["ClickSpeed"] = settings.clickSpeed
         domain["Sensitivity"] = settings.sensitivity
         domain["ShowIcon"] = settings.showMenuBarIcon ? 1 : 0

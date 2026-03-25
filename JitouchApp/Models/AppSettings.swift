@@ -44,6 +44,8 @@ enum Handedness: Int, CaseIterable, Identifiable, Sendable {
 struct JitouchSettings: Sendable {
     var isEnabled: Bool
     var launchAtLoginEnabled: Bool
+    var hasCompletedOnboarding: Bool
+    var hasDismissedOnboarding: Bool
     var clickSpeed: Double
     var sensitivity: Double
     var showMenuBarIcon: Bool

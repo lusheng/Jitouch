@@ -203,6 +203,19 @@ struct SettingsRootView: View {
         )
     }
 
+    private var onboardingPresentedBinding: Binding<Bool> {
+        Binding(
+            get: { appModel.isOnboardingPresented },
+            set: { isPresented in
+                if isPresented {
+                    appModel.presentOnboarding()
+                } else {
+                    appModel.dismissOnboarding()
+                }
+            }
+        )
+    }
+
     var body: some View {
         NavigationSplitView {
             sidebar
@@ -211,6 +224,13 @@ struct SettingsRootView: View {
         }
         .navigationSplitViewColumnWidth(min: 220, ideal: 250)
         .frame(minWidth: 1040, minHeight: 720)
+        .sheet(isPresented: onboardingPresentedBinding) {
+            OnboardingFlowView()
+                .environment(appModel)
+        }
+        .onAppear {
+            appModel.maybePresentOnboarding()
+        }
     }
 
     private var sidebar: some View {
@@ -293,6 +313,7 @@ struct SettingsRootView: View {
             subtitle: SettingsPane.overview.subtitle
         ) {
             overviewHero
+            onboardingGuideCard
             overviewMetrics
             setupChecklist
             quickActionsCard
@@ -430,6 +451,38 @@ struct SettingsRootView: View {
             ),
             in: RoundedRectangle(cornerRadius: 22, style: .continuous)
         )
+    }
+
+    private var onboardingGuideCard: some View {
+        JitouchSurfaceCard(
+            title: appModel.settings.hasCompletedOnboarding ? "Setup Guide" : "Finish Setup",
+            subtitle: appModel.settings.hasCompletedOnboarding
+                ? "The guided setup can be reopened any time if you want a quick sanity pass after more refactor work."
+                : "A short guided setup now walks through permission, startup behavior, and device readiness instead of making you hunt across the whole settings UI.",
+            symbol: "figure.walk.motion",
+            tint: appModel.settings.hasCompletedOnboarding ? .blue : .green,
+            accessory: {
+                JitouchStatusBadge(
+                    title: appModel.onboardingProgressSummary,
+                    tint: appModel.onboardingCoreRequirementsMet ? .green : .orange
+                )
+            }
+        ) {
+            HStack(spacing: 12) {
+                Button(appModel.settings.hasCompletedOnboarding ? "Replay Setup Guide" : "Open Setup Guide") {
+                    appModel.presentOnboarding()
+                }
+                .buttonStyle(.borderedProminent)
+
+                if appModel.settings.hasCompletedOnboarding {
+                    Button("Reset Setup Status") {
+                        appModel.resetOnboarding()
+                        appModel.presentOnboarding()
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+        }
     }
 
     private var overviewMetrics: some View {

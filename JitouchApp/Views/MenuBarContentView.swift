@@ -36,6 +36,18 @@ struct MenuBarContentView: View {
                 )
             }
 
+            if appModel.shouldShowSetupGuide {
+                attentionCard(
+                    title: "Guided Setup Available",
+                    message: "Open the new setup guide for a cleaner walk through permissions, startup behavior, and device readiness.",
+                    primaryTitle: "Open Setup Guide",
+                    primaryAction: {
+                        appModel.presentOnboarding()
+                        appModel.openSettingsWindow()
+                    }
+                )
+            }
+
             controlRow
             metricsGrid
             runtimeActions

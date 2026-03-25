@@ -22,6 +22,9 @@ final class JitouchAppModel {
     private(set) var lastError: String?
     private(set) var legacyPreferencesFound: Bool
     private(set) var lastRecognizedGestureSummary = "No gestures recognized yet"
+    private(set) var isOnboardingPresented = false
+
+    private var hasAttemptedAutomaticOnboarding = false
 
     init(
         settingsStore: LegacySettingsStore = LegacySettingsStore(),
@@ -111,6 +114,67 @@ final class JitouchAppModel {
         return "\(deviceCount) touch devices, \(tapStatus)"
     }
 
+    var shouldShowSetupGuide: Bool {
+        !settings.hasCompletedOnboarding || !accessibilityGranted || !eventTapManager.isRunning
+    }
+
+    var onboardingProgressValue: Double {
+        guard !onboardingChecklistItems.isEmpty else { return 0 }
+        let completed = onboardingChecklistItems.filter(\.isComplete).count
+        return Double(completed) / Double(onboardingChecklistItems.count)
+    }
+
+    var onboardingProgressSummary: String {
+        let completed = onboardingChecklistItems.filter(\.isComplete).count
+        let total = onboardingChecklistItems.count
+        return "\(completed) of \(total) core checks complete"
+    }
+
+    var onboardingCoreRequirementsMet: Bool {
+        onboardingChecklistItems.allSatisfy(\.isComplete)
+    }
+
+    var onboardingChecklistItems: [OnboardingChecklistItem] {
+        [
+            OnboardingChecklistItem(
+                id: "accessibility",
+                title: "Accessibility access",
+                detail: accessibilityGranted
+                    ? "Granted. Jitouch can observe input and control windows."
+                    : "Still required before gestures and AX commands can fully work.",
+                symbolName: accessibilityGranted ? "checkmark.shield.fill" : "exclamationmark.shield",
+                isComplete: accessibilityGranted
+            ),
+            OnboardingChecklistItem(
+                id: "runtime",
+                title: "Runtime hooks",
+                detail: eventTapManager.isRunning
+                    ? "Event tap is active and ready to receive system input."
+                    : "Event tap is not currently active. Restart services after fixing permissions.",
+                symbolName: eventTapManager.isRunning ? "dot.radiowaves.left.and.right" : "slash.circle",
+                isComplete: eventTapManager.isRunning
+            ),
+            OnboardingChecklistItem(
+                id: "profiles",
+                title: "Gesture profiles",
+                detail: settings.trackpadEnabled || settings.magicMouseEnabled
+                    ? "At least one input profile is enabled for gesture handling."
+                    : "Both trackpad and Magic Mouse profiles are currently disabled.",
+                symbolName: settings.trackpadEnabled || settings.magicMouseEnabled ? "hand.tap.fill" : "hand.raised.slash",
+                isComplete: settings.trackpadEnabled || settings.magicMouseEnabled
+            ),
+            OnboardingChecklistItem(
+                id: "mappings",
+                title: "Imported mappings",
+                detail: (trackpadCommandCount + magicMouseCommandCount + recognitionCommandCount) > 0
+                    ? "Legacy mappings are available to run and edit."
+                    : "No gesture mappings are loaded yet.",
+                symbolName: (trackpadCommandCount + magicMouseCommandCount + recognitionCommandCount) > 0 ? "square.grid.2x2.fill" : "square.grid.2x2",
+                isComplete: (trackpadCommandCount + magicMouseCommandCount + recognitionCommandCount) > 0
+            ),
+        ]
+    }
+
     func refresh() {
         settings = settingsStore.load()
         launchAtLoginStatus = launchAtLoginService.status()
@@ -126,7 +190,9 @@ final class JitouchAppModel {
 
     func requestAccessibilityPermission() {
         _ = accessibilityPermissionService.isTrusted(prompt: true)
+        settings.hasDismissedOnboarding = false
         restartEventTap()
+        persist()
     }
 
     func openAccessibilitySystemSettings() {
@@ -135,6 +201,50 @@ final class JitouchAppModel {
 
     func openLoginItemsSystemSettings() {
         launchAtLoginService.openSystemSettings()
+    }
+
+    func openSettingsWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+    }
+
+    func maybePresentOnboarding() {
+        guard !hasAttemptedAutomaticOnboarding else { return }
+        hasAttemptedAutomaticOnboarding = true
+
+        guard !settings.hasCompletedOnboarding, !settings.hasDismissedOnboarding else {
+            return
+        }
+
+        isOnboardingPresented = true
+    }
+
+    func presentOnboarding() {
+        settings.hasDismissedOnboarding = false
+        isOnboardingPresented = true
+        persist()
+    }
+
+    func dismissOnboarding() {
+        isOnboardingPresented = false
+        if !settings.hasCompletedOnboarding {
+            settings.hasDismissedOnboarding = true
+            persist()
+        }
+    }
+
+    func completeOnboarding() {
+        settings.hasCompletedOnboarding = true
+        settings.hasDismissedOnboarding = true
+        isOnboardingPresented = false
+        persist()
+    }
+
+    func resetOnboarding() {
+        settings.hasCompletedOnboarding = false
+        settings.hasDismissedOnboarding = false
+        hasAttemptedAutomaticOnboarding = false
+        persist()
     }
 
     func setEnabled(_ isEnabled: Bool) {

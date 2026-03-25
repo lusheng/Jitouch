@@ -158,6 +158,8 @@ enum CommandCatalog {
         JitouchSettings(
             isEnabled: true,
             launchAtLoginEnabled: false,
+            hasCompletedOnboarding: false,
+            hasDismissedOnboarding: false,
             clickSpeed: 0.25,
             sensitivity: 4.6666,
             showMenuBarIcon: true,
