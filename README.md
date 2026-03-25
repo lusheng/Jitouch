@@ -39,14 +39,14 @@ brew install xcodegen
 Generate the Xcode project:
 
 ```bash
-cd /Users/lusheng/Documents/开发/Jitouch
+cd /path/to/Jitouch
 xcodegen generate
 ```
 
 ### Run With Xcode
 
 ```bash
-open /Users/lusheng/Documents/开发/Jitouch/Jitouch.xcodeproj
+open Jitouch.xcodeproj
 ```
 
 Then choose the `Jitouch` scheme and run on `My Mac`.
@@ -54,15 +54,15 @@ Then choose the `Jitouch` scheme and run on `My Mac`.
 ### Run From Terminal
 
 ```bash
-cd /Users/lusheng/Documents/开发/Jitouch
+cd /path/to/Jitouch
 xcodegen generate
 xcodebuild -project Jitouch.xcodeproj -scheme Jitouch -configuration Debug CODE_SIGNING_ALLOWED=NO build
-open /Users/lusheng/Documents/开发/Jitouch/build/Debug/Jitouch.app
+open build/Debug/Jitouch.app
 ```
 
 The app bundle is intentionally emitted to:
 
-`/Users/lusheng/Documents/开发/Jitouch/build/Debug/Jitouch.app`
+`build/Debug/Jitouch.app`
 
 ## Accessibility Permission
 
@@ -70,7 +70,7 @@ Jitouch needs Accessibility permission for event taps, shortcut simulation, and 
 
 If macOS asks you to authorize it again, remove the old entry and re-add the current app bundle from:
 
-`/Users/lusheng/Documents/开发/Jitouch/build/Debug/Jitouch.app`
+`build/Debug/Jitouch.app`
 
 Unsigned debug builds created with `CODE_SIGNING_ALLOWED=NO` may require re-authorization more often.
 
