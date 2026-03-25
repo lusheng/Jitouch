@@ -42,7 +42,7 @@ struct MenuBarContentView: View {
                         actionTitle: "Open Guide"
                     ) {
                         appModel.presentOnboarding()
-                        appModel.openSettingsWindow()
+                        appModel.openSettingsWindowFromMenuBar()
                     }
                 }
 
@@ -218,7 +218,7 @@ struct MenuBarContentView: View {
         ) {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 compactActionButton(title: "Open Settings", symbol: "slider.horizontal.3") {
-                    appModel.openSettingsWindow()
+                    appModel.openSettingsWindowFromMenuBar()
                 }
 
                 compactActionButton(title: "Restart Runtime", symbol: "arrow.clockwise.circle") {

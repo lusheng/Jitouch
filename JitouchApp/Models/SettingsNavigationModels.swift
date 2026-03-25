@@ -53,7 +53,7 @@ enum JitouchSettingsPane: String, CaseIterable, Identifiable, Hashable, Sendable
         case .trackpad:
             "rectangle.and.hand.point.up.left"
         case .magicMouse:
-            "mouse"
+            "computermouse"
         case .recognition:
             "character.cursor.ibeam"
         case .diagnostics:

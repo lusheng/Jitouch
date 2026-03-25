@@ -28,6 +28,7 @@ final class JitouchAppModel {
     private var hasAttemptedAutomaticOnboarding = false
     private var hasPerformedLaunchSetupReveal = false
     private var settingsWindowPresenter: (() -> Void)?
+    private let settingsWindowIdentifier = NSUserInterfaceItemIdentifier("JitouchSettingsWindow")
 
     init(
         settingsStore: LegacySettingsStore = LegacySettingsStore(),
@@ -242,6 +243,14 @@ final class JitouchAppModel {
         }
     }
 
+    func openSettingsWindowFromMenuBar() {
+        dismissActiveMenuBarPanelIfNeeded()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            self?.openSettingsWindow()
+        }
+    }
+
     func openSettingsPane(_ pane: JitouchSettingsPane) {
         preferredSettingsPane = pane
         openSettingsWindow()
@@ -316,6 +325,17 @@ final class JitouchAppModel {
             magicMouseCharacterRecognitionService.reset()
         }
         persist()
+    }
+
+    private func dismissActiveMenuBarPanelIfNeeded() {
+        guard
+            let panelWindow = NSApp.keyWindow ?? NSApp.mainWindow,
+            panelWindow.identifier != settingsWindowIdentifier
+        else {
+            return
+        }
+
+        panelWindow.orderOut(nil)
     }
 
     func setLaunchAtLoginEnabled(_ isEnabled: Bool) {

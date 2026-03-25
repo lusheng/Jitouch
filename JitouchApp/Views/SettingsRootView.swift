@@ -155,13 +155,17 @@ struct SettingsRootView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        HStack(spacing: 0) {
             sidebar
-        } detail: {
+                .frame(width: 320, alignment: .topLeading)
+
+            Divider()
+                .overlay(Color.black.opacity(0.06))
+
             detailPane
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .navigationSplitViewColumnWidth(min: 288, ideal: 312, max: 344)
-        .frame(minWidth: 1040, minHeight: 720)
+        .frame(minWidth: 1280, minHeight: 760)
         .sheet(isPresented: onboardingPresentedBinding) {
             OnboardingFlowView()
                 .environment(appModel)
@@ -176,7 +180,7 @@ struct SettingsRootView: View {
     }
 
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 20) {
             sidebarHeader
 
             Text("SETTINGS")
@@ -203,7 +207,7 @@ struct SettingsRootView: View {
         return Button {
             selectedPane = pane
         } label: {
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.white.opacity(0.58))
@@ -214,34 +218,19 @@ struct SettingsRootView: View {
                 }
                 .frame(width: 30, height: 30)
 
-                VStack(alignment: .leading, spacing: isSelected ? 4 : 2) {
+                VStack(alignment: .leading, spacing: 0) {
                     Text(pane.title)
-                        .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
+                        .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
                         .foregroundStyle(.primary)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
-
-                    if isSelected {
-                        Text(pane.subtitle)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(1)
-
-                if isSelected {
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 6, height: 6)
-                        .padding(.top, 7)
-                }
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, isSelected ? 12 : 10)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -318,7 +307,7 @@ struct SettingsRootView: View {
                 tint: appModel.settings.isEnabled ? .green : .orange
             )
 
-            Text("Clean, app-first controls for the Swift rewrite.")
+            Text("App-first controls for the Swift rewrite.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .padding(.leading, 2)

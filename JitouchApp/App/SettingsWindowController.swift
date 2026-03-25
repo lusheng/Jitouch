@@ -35,8 +35,8 @@ final class SettingsWindowController {
         let window = NSWindow(contentViewController: hostingController)
         window.title = "Jitouch Settings"
         window.identifier = NSUserInterfaceItemIdentifier("JitouchSettingsWindow")
-        window.setContentSize(NSSize(width: 1160, height: 800))
-        window.minSize = NSSize(width: 980, height: 720)
+        window.setContentSize(NSSize(width: 1290, height: 820))
+        window.minSize = NSSize(width: 1220, height: 760)
         window.toolbarStyle = .unified
         window.titleVisibility = .visible
         window.isReleasedWhenClosed = false
