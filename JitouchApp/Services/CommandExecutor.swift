@@ -12,12 +12,18 @@ struct ResolvedGestureCommand {
     let command: GestureCommand
 }
 
+private struct ActiveApplicationContext {
+    let name: String
+    let path: String?
+}
+
 @MainActor
 @Observable
 final class CommandExecutor {
     private let keyboard = KeyboardSimulationService()
     private let workspace = NSWorkspace.shared
     private let moveResizeOverlay = MoveResizeOverlayController()
+    private let commandFeedbackOverlay = CommandFeedbackOverlayController()
 
     private(set) var lastExecutedCommandSummary = "No commands executed yet"
     private(set) var lastResolutionSummary = "No gesture-command resolution yet"
@@ -88,43 +94,35 @@ final class CommandExecutor {
             return nil
         }
 
-        let applicationName = currentApplicationName()
+        let applicationContext = currentApplicationContext()
+        let applicationName = applicationContext.name
         let candidates = candidateApplicationNames(for: applicationName)
         let commandSets = settings.commandSets[device, default: []]
 
-        for candidate in candidates {
-            if let appSet = commandSets.first(where: { $0.application == candidate }) {
-                if let command = appSet.gestures.first(where: { $0.gesture == gestureName && $0.isEnabled }) {
-                    return ResolvedGestureCommand(
-                        event: event,
-                        gestureName: gestureName,
-                        device: device,
-                        applicationName: applicationName,
-                        command: command
-                    )
-                }
-
-                if let fallback = appSet.gestures.first(where: { $0.gesture == "All Unassigned Gestures" && $0.isEnabled }) {
-                    return ResolvedGestureCommand(
-                        event: event,
-                        gestureName: gestureName,
-                        device: device,
-                        applicationName: applicationName,
-                        command: fallback
-                    )
-                }
+        for appSet in matchingCommandSets(
+            in: commandSets,
+            candidates: candidates,
+            activePath: applicationContext.path
+        ) {
+            if let command = appSet.gestures.first(where: { $0.gesture == gestureName && $0.isEnabled }) {
+                return ResolvedGestureCommand(
+                    event: event,
+                    gestureName: gestureName,
+                    device: device,
+                    applicationName: applicationName,
+                    command: command
+                )
             }
-        }
 
-        if let allApps = commandSets.first(where: { $0.application == "All Applications" }),
-           let command = allApps.gestures.first(where: { $0.gesture == gestureName && $0.isEnabled }) {
-            return ResolvedGestureCommand(
-                event: event,
-                gestureName: gestureName,
-                device: device,
-                applicationName: applicationName,
-                command: command
-            )
+            if let fallback = appSet.gestures.first(where: { $0.gesture == CommandCatalog.allUnassignedGesture && $0.isEnabled }) {
+                return ResolvedGestureCommand(
+                    event: event,
+                    gestureName: gestureName,
+                    device: device,
+                    applicationName: applicationName,
+                    command: fallback
+                )
+            }
         }
 
         return nil
@@ -306,8 +304,12 @@ final class CommandExecutor {
         )
     }
 
-    private func currentApplicationName() -> String {
-        workspace.frontmostApplication?.localizedName ?? "All Applications"
+    private func currentApplicationContext() -> ActiveApplicationContext {
+        let application = workspace.frontmostApplication
+        return ActiveApplicationContext(
+            name: application?.localizedName ?? "All Applications",
+            path: standardizedApplicationPath(application?.bundleURL)
+        )
     }
 
     private func candidateApplicationNames(for applicationName: String) -> [String] {
@@ -322,6 +324,48 @@ final class CommandExecutor {
         }
         names.append("All Applications")
         return Array(NSOrderedSet(array: names)) as? [String] ?? names
+    }
+
+    private func matchingCommandSets(
+        in commandSets: [ApplicationCommandSet],
+        candidates: [String],
+        activePath: String?
+    ) -> [ApplicationCommandSet] {
+        var results: [ApplicationCommandSet] = []
+
+        if let activePath {
+            results.append(contentsOf: commandSets.filter {
+                standardizedApplicationPath($0.path) == activePath
+            })
+        }
+
+        for candidate in candidates where candidate != "All Applications" {
+            results.append(contentsOf: commandSets.filter {
+                $0.application == candidate &&
+                (
+                    $0.path.isEmpty ||
+                    standardizedApplicationPath($0.path) == activePath
+                )
+            })
+        }
+
+        results.append(contentsOf: commandSets.filter { $0.application == "All Applications" })
+
+        var uniqueResults: [ApplicationCommandSet] = []
+        var seenIDs = Set<String>()
+        for set in results where seenIDs.insert(set.id).inserted {
+            uniqueResults.append(set)
+        }
+        return uniqueResults
+    }
+
+    private func standardizedApplicationPath(_ url: URL?) -> String? {
+        url?.standardizedFileURL.path
+    }
+
+    private func standardizedApplicationPath(_ path: String) -> String? {
+        guard !path.isEmpty else { return nil }
+        return URL(fileURLWithPath: NSString(string: path).expandingTildeInPath).standardizedFileURL.path
     }
 
     private func commandClick(button: CGMouseButton, flags: CGEventFlags = []) {
@@ -668,11 +712,24 @@ final class CommandExecutor {
     private func recordExecuted(_ action: String) {
         lastExecutedCommandSummary = action
         lastError = nil
+        if shouldShowFeedback(for: action) {
+            commandFeedbackOverlay.showSuccess(title: action)
+        }
     }
 
     private func recordFailed(_ action: String, reason: String) {
         lastExecutedCommandSummary = action
         lastError = reason
+        commandFeedbackOverlay.showFailure(title: action, detail: reason)
+    }
+
+    private func shouldShowFeedback(for action: String) -> Bool {
+        switch action {
+        case "Ignored placeholder action", "Thumb Middle Click Down", "Thumb Middle Click Up":
+            false
+        default:
+            true
+        }
     }
 }
 

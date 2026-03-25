@@ -23,6 +23,10 @@ struct LegacySettingsStore {
 
         var settings = defaults
         settings.isEnabled = LegacyValue.bool(from: rawDomain["enAll"], default: defaults.isEnabled)
+        settings.launchAtLoginEnabled = LegacyValue.bool(
+            from: rawDomain["launchAtLoginEnabled"],
+            default: defaults.launchAtLoginEnabled
+        )
         settings.clickSpeed = LegacyValue.double(from: rawDomain["ClickSpeed"], default: defaults.clickSpeed)
         settings.sensitivity = LegacyValue.double(from: rawDomain["Sensitivity"], default: defaults.sensitivity)
         settings.showMenuBarIcon = LegacyValue.bool(from: rawDomain["ShowIcon"], default: defaults.showMenuBarIcon)
@@ -92,6 +96,7 @@ struct LegacySettingsStore {
     func save(_ settings: JitouchSettings) throws {
         var domain = loadRawDomain() ?? [:]
         domain["enAll"] = settings.isEnabled ? 1 : 0
+        domain["launchAtLoginEnabled"] = settings.launchAtLoginEnabled ? 1 : 0
         domain["ClickSpeed"] = settings.clickSpeed
         domain["Sensitivity"] = settings.sensitivity
         domain["ShowIcon"] = settings.showMenuBarIcon ? 1 : 0

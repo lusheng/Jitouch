@@ -30,6 +30,28 @@ enum CommandDevice: String, CaseIterable, Identifiable, Hashable, Sendable {
     }
 }
 
+enum GestureCommandKind: String, CaseIterable, Identifiable, Sendable {
+    case action
+    case shortcut
+    case openURL
+    case openFile
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .action:
+            "Action"
+        case .shortcut:
+            "Shortcut"
+        case .openURL:
+            "Open URL"
+        case .openFile:
+            "Open File"
+        }
+    }
+}
+
 struct GestureCommand: Identifiable, Hashable, Sendable {
     var id: String {
         "\(gesture)|\(command)|\(modifierFlags)|\(keyCode)|\(openFilePath ?? "")|\(openURL ?? "")"
@@ -102,6 +124,19 @@ struct GestureCommand: Identifiable, Hashable, Sendable {
         }
 
         return dictionary
+    }
+
+    var commandKind: GestureCommandKind {
+        if !isAction {
+            return .shortcut
+        }
+        if openURL != nil {
+            return .openURL
+        }
+        if openFilePath != nil {
+            return .openFile
+        }
+        return .action
     }
 }
 

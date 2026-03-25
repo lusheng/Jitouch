@@ -72,6 +72,8 @@ struct CharacterRecognitionEngine {
         .init(value: "Right-Up", segments: [.degrees(0, span: 20), .degrees(90, span: 20)]),
     ]
 
+    static let supportedCharacterValues = templates.map(\.value)
+
     private var candidates = Self.templates.map { ScoredTemplate(template: $0) }
     private(set) var isCancelled = false
 

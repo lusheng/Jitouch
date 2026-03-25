@@ -1,3 +1,4 @@
+import AppKit
 import ApplicationServices
 
 struct AccessibilityPermissionService {
@@ -12,5 +13,12 @@ struct AccessibilityPermissionService {
 
         let options = [promptOptionKey: true] as CFDictionary
         return AXIsProcessTrustedWithOptions(options)
+    }
+
+    func openSystemSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
+            return
+        }
+        NSWorkspace.shared.open(url)
     }
 }

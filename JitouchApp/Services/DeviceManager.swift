@@ -44,6 +44,7 @@ final class DeviceManager {
 
     private var registeredDevices: [RegisteredDevice] = []
     private var deviceList: CFMutableArray?
+    private var sleepObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
 
     private var notificationPort: IONotificationPortRef?
@@ -64,7 +65,7 @@ final class DeviceManager {
         }
 
         activeDeviceManager = self
-        installWakeObserver()
+        installPowerStateObservers()
         installHotPlugNotificationsIfNeeded()
         isRunning = true
         refreshDevicesNow()
@@ -73,7 +74,7 @@ final class DeviceManager {
     func stop() {
         guard isRunning else { return }
 
-        uninstallWakeObserver()
+        uninstallPowerStateObservers()
         uninstallHotPlugNotifications()
         stopRegisteredDevices()
         releaseDeviceList()
@@ -195,8 +196,18 @@ final class DeviceManager {
         registeredDevices.removeAll()
     }
 
-    private func installWakeObserver() {
-        guard wakeObserver == nil else { return }
+    private func installPowerStateObservers() {
+        guard sleepObserver == nil, wakeObserver == nil else { return }
+
+        sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.prepareForSleep()
+            }
+        }
 
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification,
@@ -209,10 +220,25 @@ final class DeviceManager {
         }
     }
 
-    private func uninstallWakeObserver() {
+    private func uninstallPowerStateObservers() {
+        if let sleepObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(sleepObserver)
+            self.sleepObserver = nil
+        }
+
         guard let wakeObserver else { return }
         NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
         self.wakeObserver = nil
+    }
+
+    private func prepareForSleep() {
+        stopRegisteredDevices()
+        releaseDeviceList()
+        trackpadDevices = []
+        magicMouseDevices = []
+        lastRefreshDate = .now
+        lastError = nil
+        lastEventDescription = "System sleeping, awaiting wake rescan"
     }
 
     private func installHotPlugNotificationsIfNeeded() {
