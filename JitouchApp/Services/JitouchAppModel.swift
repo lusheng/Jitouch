@@ -73,6 +73,7 @@ final class JitouchAppModel {
         self.gestureEngine.updateSettings(settings)
         self.magicMouseCharacterRecognitionService.updateSettings(settings)
         characterRecognitionDiagnostics.configure(from: settings)
+        self.commandExecutor.updateSettingsSnapshot(settings)
         startRuntimeServices()
     }
 
@@ -187,6 +188,7 @@ final class JitouchAppModel {
         gestureEngine.updateSettings(settings)
         magicMouseCharacterRecognitionService.updateSettings(settings)
         characterRecognitionDiagnostics.configure(from: settings)
+        commandExecutor.updateSettingsSnapshot(settings)
         deviceManager.refreshDevicesNow()
     }
 
@@ -503,6 +505,7 @@ final class JitouchAppModel {
             gestureEngine.updateSettings(settings)
             magicMouseCharacterRecognitionService.updateSettings(settings)
             characterRecognitionDiagnostics.configure(from: settings)
+            commandExecutor.updateSettingsSnapshot(settings)
         } catch {
             lastError = "Failed to save settings: \(error.localizedDescription)"
         }

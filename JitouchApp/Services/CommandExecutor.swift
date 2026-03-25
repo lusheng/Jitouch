@@ -17,6 +17,25 @@ private struct ActiveApplicationContext {
     let path: String?
 }
 
+struct ActiveProfilePreview: Identifiable, Hashable, Sendable {
+    var id: String { device.id }
+
+    let device: CommandDevice
+    let applicationName: String
+    let profileApplication: String
+    let profilePath: String
+    let isOverride: Bool
+    let enabledGestureCount: Int
+
+    var profileTitle: String {
+        isOverride ? "\(profileApplication) Override" : "All Applications"
+    }
+
+    var detailText: String {
+        "\(enabledGestureCount) enabled gesture\(enabledGestureCount == 1 ? "" : "s")"
+    }
+}
+
 @MainActor
 @Observable
 final class CommandExecutor {
@@ -28,11 +47,31 @@ final class CommandExecutor {
     private(set) var lastExecutedCommandSummary = "No commands executed yet"
     private(set) var lastResolutionSummary = "No gesture-command resolution yet"
     private(set) var lastError: String?
+    private(set) var activeApplicationDisplayName = "No active app captured yet"
+    private(set) var activeApplicationDisplayPath: String?
+    private(set) var activeProfilePreviews: [ActiveProfilePreview] = []
 
     private var savedWindowFrames: [pid_t: CGRect] = [:]
     private var moveResizeSession: MoveResizeSession?
     private var isThumbMiddleClickHeld = false
     private var mouseEventHandlerID: UUID?
+    private var latestSettings = CommandCatalog.defaultSettings
+    private var lastExternalApplicationContext: ActiveApplicationContext?
+    private var workspaceActivationObserver: NSObjectProtocol?
+
+    init() {
+        workspaceActivationObserver = workspace.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.refreshActiveApplicationRouting()
+            }
+        }
+
+        refreshActiveApplicationRouting()
+    }
 
     func installEventTapHandler(on eventTapManager: EventTapManager) {
         activeMoveResizeExecutor = self
@@ -45,6 +84,15 @@ final class CommandExecutor {
     func cancelTransientState() {
         endMoveResize(summary: "Move / Resize Cancelled", clearError: false)
         releaseHeldMouseButtons()
+    }
+
+    func updateSettingsSnapshot(_ settings: JitouchSettings) {
+        latestSettings = settings
+        refreshActiveApplicationRouting()
+    }
+
+    func activeProfilePreview(for device: CommandDevice) -> ActiveProfilePreview? {
+        activeProfilePreviews.first(where: { $0.device == device })
     }
 
     func execute(event: GestureEvent, settings: JitouchSettings) {
@@ -312,6 +360,21 @@ final class CommandExecutor {
         )
     }
 
+    private func externalFrontmostApplicationContext() -> ActiveApplicationContext? {
+        guard let application = workspace.frontmostApplication else {
+            return nil
+        }
+
+        if application.bundleIdentifier == Bundle.main.bundleIdentifier {
+            return nil
+        }
+
+        return ActiveApplicationContext(
+            name: application.localizedName ?? "All Applications",
+            path: standardizedApplicationPath(application.bundleURL)
+        )
+    }
+
     private func candidateApplicationNames(for applicationName: String) -> [String] {
         let aliases: [String: String] = [
             "Google Chrome": "Chrome",
@@ -324,6 +387,49 @@ final class CommandExecutor {
         }
         names.append("All Applications")
         return Array(NSOrderedSet(array: names)) as? [String] ?? names
+    }
+
+    private func refreshActiveApplicationRouting() {
+        if let externalContext = externalFrontmostApplicationContext() {
+            lastExternalApplicationContext = externalContext
+        }
+
+        let displayContext = lastExternalApplicationContext ?? currentApplicationContext()
+        activeApplicationDisplayName = displayContext.name
+        activeApplicationDisplayPath = displayContext.path
+        activeProfilePreviews = CommandDevice.allCases.compactMap { device in
+            activeProfilePreview(
+                for: device,
+                settings: latestSettings,
+                applicationContext: displayContext
+            )
+        }
+    }
+
+    private func activeProfilePreview(
+        for device: CommandDevice,
+        settings: JitouchSettings,
+        applicationContext: ActiveApplicationContext
+    ) -> ActiveProfilePreview? {
+        let candidates = candidateApplicationNames(for: applicationContext.name)
+        let commandSets = settings.commandSets[device, default: []]
+
+        guard let matchedSet = matchingCommandSets(
+            in: commandSets,
+            candidates: candidates,
+            activePath: applicationContext.path
+        ).first else {
+            return nil
+        }
+
+        return ActiveProfilePreview(
+            device: device,
+            applicationName: applicationContext.name,
+            profileApplication: matchedSet.application,
+            profilePath: matchedSet.path,
+            isOverride: !matchedSet.path.isEmpty,
+            enabledGestureCount: matchedSet.gestures.filter(\.isEnabled).count
+        )
     }
 
     private func matchingCommandSets(

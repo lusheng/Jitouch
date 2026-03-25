@@ -49,6 +49,7 @@ struct MenuBarContentView: View {
             }
 
             controlRow
+            activeAppRoutingCard
             metricsGrid
             runtimeActions
             launchAtLoginCard
@@ -164,6 +165,51 @@ struct MenuBarContentView: View {
         }
     }
 
+    private var activeAppRoutingCard: some View {
+        JitouchSurfaceCard(
+            title: "Active App Routing",
+            subtitle: "Shows the last non-Jitouch frontmost app and the gesture profiles currently matched for it.",
+            symbol: "app.badge.checkmark",
+            tint: .mint
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    applicationIconBadge(path: commandExecutor.activeApplicationDisplayPath)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(commandExecutor.activeApplicationDisplayName)
+                            .font(.subheadline.weight(.semibold))
+
+                        Text(
+                            commandExecutor.activeApplicationDisplayPath == nil
+                                ? "Keeping the most recent external app in view while the menu bar panel is open."
+                                : (commandExecutor.activeApplicationDisplayPath ?? "")
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                    }
+
+                    Spacer(minLength: 12)
+                }
+
+                routingRow(
+                    title: "Trackpad",
+                    preview: commandExecutor.activeProfilePreview(for: .trackpad),
+                    isEnabled: appModel.settings.trackpadEnabled,
+                    tint: .blue
+                )
+
+                routingRow(
+                    title: "Magic Mouse",
+                    preview: commandExecutor.activeProfilePreview(for: .magicMouse),
+                    isEnabled: appModel.settings.magicMouseEnabled,
+                    tint: .teal
+                )
+            }
+        }
+    }
+
     private var runtimeActions: some View {
         JitouchSurfaceCard(
             title: "Quick Actions",
@@ -267,6 +313,83 @@ struct MenuBarContentView: View {
             symbol: symbol,
             tint: tint
         )
+    }
+
+    private func routingRow(
+        title: String,
+        preview: ActiveProfilePreview?,
+        isEnabled: Bool,
+        tint: Color
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+
+                if !isEnabled {
+                    JitouchStatusBadge(title: "Disabled", tint: .secondary)
+                } else if preview?.isOverride == true {
+                    JitouchStatusBadge(title: "Override", tint: tint)
+                } else {
+                    JitouchStatusBadge(title: "Default", tint: .secondary)
+                }
+
+                Spacer()
+            }
+
+            if let preview {
+                Text(preview.profileTitle)
+                    .font(.caption.weight(.semibold))
+
+                Text(preview.detailText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("No profile available.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(nsColor: .windowBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private func applicationIconBadge(path: String?) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.mint.opacity(0.14))
+
+            if let icon = applicationIcon(for: path) {
+                Image(nsImage: icon)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .padding(7)
+            } else {
+                Image(systemName: "app.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.mint)
+            }
+        }
+        .frame(width: 40, height: 40)
+    }
+
+    private func applicationIcon(for path: String?) -> NSImage? {
+        guard let path, !path.isEmpty else { return nil }
+
+        let standardizedPath = URL(fileURLWithPath: path).standardizedFileURL.path
+        guard FileManager.default.fileExists(atPath: standardizedPath) else { return nil }
+
+        let icon = NSWorkspace.shared.icon(forFile: standardizedPath)
+        icon.size = NSSize(width: 36, height: 36)
+        return icon
     }
 
     private var cardBackground: some ShapeStyle {
