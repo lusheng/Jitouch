@@ -1437,12 +1437,33 @@ struct SettingsRootView: View {
             }
     }
 
+    private func overrideDifferenceCount(
+        for set: ApplicationCommandSet,
+        device: CommandDevice
+    ) -> Int {
+        guard !set.path.isEmpty else { return 0 }
+        let defaultSetID = defaultCommandSet(for: device)?.id ?? "All Applications"
+
+        return CommandCatalog.editableGestures(for: device).reduce(into: 0) { count, gesture in
+            let overrideCommand = appModel.gestureCommand(for: device, setID: set.id, gesture: gesture)
+            let defaultCommand = appModel.gestureCommand(for: device, setID: defaultSetID, gesture: gesture)
+            if overrideCommand != defaultCommand {
+                count += 1
+            }
+        }
+    }
+
+    private func defaultCommandSet(for device: CommandDevice) -> ApplicationCommandSet? {
+        appModel.commandSets(for: device).first(where: { $0.path.isEmpty })
+    }
+
     private func profileEditingContext(
         for device: CommandDevice,
         set: ApplicationCommandSet
     ) -> some View {
         let enabledCount = set.gestures.filter(\.isEnabled).count
         let overrides = applicationOverrides(for: device)
+        let differenceCount = overrideDifferenceCount(for: set, device: device)
         let tint = set.path.isEmpty ? Color.blue : Color.teal
 
         return VStack(alignment: .leading, spacing: 12) {
@@ -1480,6 +1501,16 @@ struct SettingsRootView: View {
                     title: "\(enabledCount) enabled",
                     tint: tint
                 )
+            }
+
+            if !set.path.isEmpty {
+                Text(
+                    differenceCount == 0
+                        ? "This override currently matches the All Applications profile."
+                        : "\(differenceCount) gesture\(differenceCount == 1 ? "" : "s") currently differ from All Applications."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 10) {
@@ -1534,6 +1565,7 @@ struct SettingsRootView: View {
         let isSelected = currentSelectedSetID(for: device) == set.id
         let enabledCount = set.gestures.filter(\.isEnabled).count
         let totalCount = set.gestures.count
+        let differenceCount = overrideDifferenceCount(for: set, device: device)
 
         return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
@@ -1559,7 +1591,7 @@ struct SettingsRootView: View {
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
 
-                    Text("\(enabledCount) enabled gestures · \(totalCount) stored mappings")
+                    Text("\(enabledCount) enabled gestures · \(totalCount) stored mappings · \(differenceCount) changed from default")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
