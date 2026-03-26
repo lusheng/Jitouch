@@ -2,6 +2,19 @@ import AppKit
 import SwiftUI
 
 struct SettingsRootView: View {
+    private struct CommandEditingContext {
+        let device: CommandDevice
+        let commandSets: [ApplicationCommandSet]
+        let defaultSetID: String
+        let selectedSet: ApplicationCommandSet?
+        let selectedSetID: String
+        let overrides: [ApplicationCommandSet]
+        let overrideCount: Int
+        let searchText: String
+        let activeGestures: [String]
+        let inactiveGestures: [String]
+    }
+
     @Environment(JitouchAppModel.self) private var appModel
     @Environment(DeviceManager.self) private var deviceManager
     @Environment(EventTapManager.self) private var eventTapManager
@@ -247,6 +260,8 @@ struct SettingsRootView: View {
         case .magicMouse:
             deviceConfigurationPane(for: .magicMouse)
         case .recognition:
+            let context = commandEditingContext(for: .recognition)
+
             RecognitionSettingsTab(
                 trackpadCharacterRecognitionEnabled: trackpadCharacterRecognitionEnabledBinding,
                 oneFingerDrawingEnabled: oneFingerDrawingEnabledBinding,
@@ -257,11 +272,11 @@ struct SettingsRootView: View {
                 hasLiveDiagnosticsSnapshot: appModel.characterRecognitionDiagnostics.liveSnapshot != nil,
                 characterRecognitionDiagnosticsEnabled: characterRecognitionDiagnosticsEnabledBinding
             ) {
-                profileSelectionSection(for: .recognition)
+                profileSelectionSection(context)
             } gestureSearch: {
-                gestureSearchSection(for: .recognition)
+                gestureSearchSection(context)
             } gestureEditor: {
-                gestureEditingSection(for: .recognition)
+                gestureEditingSection(context)
             }
         case .diagnostics:
             DiagnosticsSettingsTab(
@@ -330,6 +345,7 @@ struct SettingsRootView: View {
     }
 
     private func deviceConfigurationPane(for device: CommandDevice) -> some View {
+        let context = commandEditingContext(for: device)
         let pane: JitouchSettingsPane = device == .trackpad ? .trackpad : .magicMouse
         let mappingCount = device == .trackpad ? appModel.trackpadCommandCount : appModel.magicMouseCommandCount
         let connectedDeviceCount = device == .trackpad ? deviceManager.trackpadDevices.count : deviceManager.magicMouseDevices.count
@@ -343,13 +359,13 @@ struct SettingsRootView: View {
             connectedDeviceCount: connectedDeviceCount,
             isProfilesEnabled: isProfilesEnabled
         ) {
-            profileSelectionSection(for: device)
+            profileSelectionSection(context)
         } overrideManager: {
-            overrideManagerSection(for: device)
+            overrideManagerSection(context)
         } gestureSearch: {
-            gestureSearchSection(for: device)
+            gestureSearchSection(context)
         } gestureEditor: {
-            gestureEditingSection(for: device)
+            gestureEditingSection(context)
         }
     }
 
@@ -366,111 +382,130 @@ struct SettingsRootView: View {
         )
     }
 
-    private func profileSelectionSection(for device: CommandDevice) -> some View {
+    private func profileSelectionSection(_ context: CommandEditingContext) -> some View {
         SettingsProfileSelectionSection(
-            device: device,
-            sets: appModel.commandSets(for: device),
-            selectedSetID: selectedSetIDBinding(for: device)
+            device: context.device,
+            sets: context.commandSets,
+            selectedSetID: selectedSetIDBinding(for: context.device)
         )
     }
 
-    private func overrideManagerSection(for device: CommandDevice) -> some View {
-        let sets = appModel.commandSets(for: device)
-
+    private func overrideManagerSection(_ context: CommandEditingContext) -> some View {
         return SettingsOverrideManagerSection(
-            device: device,
-            commandSets: sets,
-            currentSelectedSetID: currentSelectedSetID(for: device),
+            device: context.device,
+            commandSets: context.commandSets,
+            currentSelectedSetID: context.selectedSetID,
             differenceCount: { set in
-                overrideDifferenceCount(for: set, device: device)
+                overrideDifferenceCount(for: set, defaultSetID: context.defaultSetID, device: context.device)
             },
             onAddOverride: {
-                let previousIDs = Set(sets.map(\.id))
-                appModel.addApplicationOverrideFromOpenPanel(for: device)
-                if let newID = appModel.commandSets(for: device)
+                let previousIDs = Set(context.commandSets.map(\.id))
+                appModel.addApplicationOverrideFromOpenPanel(for: context.device)
+                if let newID = appModel.commandSets(for: context.device)
                     .map(\.id)
                     .first(where: { !previousIDs.contains($0) }) {
-                    setSelectedSetID(newID, for: device)
+                    selectedSetIDStorage(for: context.device).wrappedValue = newID
                 }
             },
             onSelectOverride: { setID in
-                setSelectedSetID(setID, for: device)
+                selectedSetIDStorage(for: context.device).wrappedValue = setID
             },
             onResetOverride: { setID in
-                appModel.resetApplicationOverrideToDefault(for: device, setID: setID)
+                appModel.resetApplicationOverrideToDefault(for: context.device, setID: setID)
             },
             onOpenApp: openOverrideApplication,
             onReveal: revealFilePath,
             onRemoveOverride: { setID in
-                appModel.removeApplicationOverride(for: device, setID: setID)
+                appModel.removeApplicationOverride(for: context.device, setID: setID)
             }
         )
     }
 
-    private func gestureEditingSection(for device: CommandDevice) -> some View {
-        let selectedSet = selectedCommandSet(for: device)
-        let overrideCount = applicationOverrides(for: device).count
-        let searchText = currentSearchText(for: device)
-        let activeGestures = selectedSet.map { activeGestureNames(for: device, setID: $0.id) } ?? []
-        let inactiveGestures = selectedSet.map { inactiveGestureNames(for: device, setID: $0.id) } ?? []
-        let differenceCount = selectedSet.map { overrideDifferenceCount(for: $0, device: device) } ?? 0
+    private func gestureEditingSection(_ context: CommandEditingContext) -> some View {
+        let differenceCount = context.selectedSet.map {
+            overrideDifferenceCount(for: $0, defaultSetID: context.defaultSetID, device: context.device)
+        } ?? 0
 
         return SettingsGestureEditingSection(
-            device: device,
-            selectedSet: selectedSet,
-            overrideCount: overrideCount,
+            device: context.device,
+            selectedSet: context.selectedSet,
+            overrideCount: context.overrideCount,
             differenceCount: differenceCount,
-            searchText: searchText,
-            activeGestures: activeGestures,
-            inactiveGestures: inactiveGestures,
+            searchText: context.searchText,
+            activeGestures: context.activeGestures,
+            inactiveGestures: context.inactiveGestures,
             onBackToDefault: {
-                setSelectedSetID(defaultSetID(for: device), for: device)
+                selectedSetIDStorage(for: context.device).wrappedValue = context.defaultSetID
             },
             onResetToDefault: {
-                guard let selectedSet else { return }
-                appModel.resetApplicationOverrideToDefault(for: device, setID: selectedSet.id)
+                guard let selectedSet = context.selectedSet else { return }
+                appModel.resetApplicationOverrideToDefault(for: context.device, setID: selectedSet.id)
             },
             onOpenApp: {
-                guard let selectedSet else { return }
+                guard let selectedSet = context.selectedSet else { return }
                 openOverrideApplication(selectedSet.path)
             },
             onReveal: {
-                guard let selectedSet else { return }
+                guard let selectedSet = context.selectedSet else { return }
                 revealFilePath(selectedSet.path)
             },
             onRemoveOverride: {
-                guard let selectedSet else { return }
-                appModel.removeApplicationOverride(for: device, setID: selectedSet.id)
+                guard let selectedSet = context.selectedSet else { return }
+                appModel.removeApplicationOverride(for: context.device, setID: selectedSet.id)
             }
         ) { gesture in
-            let setID = selectedSet?.id ?? defaultSetID(for: device)
             SettingsGestureEditorCard(
-                device: device,
+                device: context.device,
                 gesture: gesture,
-                command: gestureCommandBinding(for: device, setID: setID, gesture: gesture),
+                command: gestureCommandBinding(for: context, gesture: gesture),
                 onRevealFilePath: revealFilePath
             )
         }
     }
 
-    private func gestureSearchSection(for device: CommandDevice) -> some View {
-        SettingsGestureSearchCard(device: device, searchText: searchTextBinding(for: device))
+    private func gestureSearchSection(_ context: CommandEditingContext) -> some View {
+        SettingsGestureSearchCard(device: context.device, searchText: searchTextBinding(for: context.device))
     }
 
-    private func applicationOverrides(for device: CommandDevice) -> [ApplicationCommandSet] {
-        appModel.commandSets(for: device)
+    private func commandEditingContext(for device: CommandDevice) -> CommandEditingContext {
+        let commandSets = appModel.commandSets(for: device)
+        let defaultSetID = commandSets.first(where: { $0.path.isEmpty })?.id ?? "All Applications"
+        let rawSelectedSetID = selectedSetIDStorage(for: device).wrappedValue
+        let selectedSet = commandSets.first(where: { $0.id == rawSelectedSetID }) ?? commandSets.first
+        let selectedSetID = selectedSet?.id ?? ""
+        let overrides = commandSets
             .filter { !$0.path.isEmpty }
             .sorted {
                 $0.application.localizedCaseInsensitiveCompare($1.application) == .orderedAscending
             }
+        let searchText = searchTextBinding(for: device).wrappedValue
+        let activeGestures = selectedSet.map {
+            gestureNames(for: device, setID: $0.id, searchText: searchText, isEnabled: true)
+        } ?? []
+        let inactiveGestures = selectedSet.map {
+            gestureNames(for: device, setID: $0.id, searchText: searchText, isEnabled: false)
+        } ?? []
+
+        return CommandEditingContext(
+            device: device,
+            commandSets: commandSets,
+            defaultSetID: defaultSetID,
+            selectedSet: selectedSet,
+            selectedSetID: selectedSetID,
+            overrides: overrides,
+            overrideCount: overrides.count,
+            searchText: searchText,
+            activeGestures: activeGestures,
+            inactiveGestures: inactiveGestures
+        )
     }
 
     private func overrideDifferenceCount(
         for set: ApplicationCommandSet,
+        defaultSetID: String,
         device: CommandDevice
     ) -> Int {
         guard !set.path.isEmpty else { return 0 }
-        let defaultSetID = defaultSetID(for: device)
 
         return CommandCatalog.editableGestures(for: device).reduce(into: 0) { count, gesture in
             let overrideCommand = appModel.gestureCommand(for: device, setID: set.id, gesture: gesture)
@@ -481,74 +516,46 @@ struct SettingsRootView: View {
         }
     }
 
-    private func defaultCommandSet(for device: CommandDevice) -> ApplicationCommandSet? {
-        appModel.commandSets(for: device).first(where: { $0.path.isEmpty })
-    }
-
-    private func defaultSetID(for device: CommandDevice) -> String {
-        defaultCommandSet(for: device)?.id ?? "All Applications"
-    }
-
-    private func selectedCommandSet(for device: CommandDevice) -> ApplicationCommandSet? {
-        let sets = appModel.commandSets(for: device)
-        guard !sets.isEmpty else { return nil }
-
-        let selectedID = currentSelectedSetID(for: device)
-        return sets.first(where: { $0.id == selectedID }) ?? sets.first
-    }
-
     private func selectedSetIDBinding(for device: CommandDevice) -> Binding<String> {
         Binding(
-            get: { selectedCommandSet(for: device)?.id ?? "" },
+            get: { commandEditingContext(for: device).selectedSetID },
             set: { newValue in
-                setSelectedSetID(newValue, for: device)
+                selectedSetIDStorage(for: device).wrappedValue = newValue
             }
         )
     }
 
-    private func currentSelectedSetID(for device: CommandDevice) -> String {
+    private func selectedSetIDStorage(for device: CommandDevice) -> Binding<String> {
         switch device {
         case .trackpad:
-            selectedTrackpadSetID
+            $selectedTrackpadSetID
         case .magicMouse:
-            selectedMagicMouseSetID
+            $selectedMagicMouseSetID
         case .recognition:
-            selectedRecognitionSetID
+            $selectedRecognitionSetID
         }
     }
 
-    private func setSelectedSetID(_ value: String, for device: CommandDevice) {
-        switch device {
-        case .trackpad:
-            selectedTrackpadSetID = value
-        case .magicMouse:
-            selectedMagicMouseSetID = value
-        case .recognition:
-            selectedRecognitionSetID = value
-        }
-    }
-
-    private func activeGestureNames(for device: CommandDevice, setID: String) -> [String] {
+    private func gestureNames(
+        for device: CommandDevice,
+        setID: String,
+        searchText: String,
+        isEnabled: Bool
+    ) -> [String] {
         CommandCatalog.editableGestures(for: device).filter {
             let command = appModel.gestureCommand(for: device, setID: setID, gesture: $0)
-            return command.isEnabled && gestureMatchesSearch($0, command: command, device: device)
-        }
-    }
-
-    private func inactiveGestureNames(for device: CommandDevice, setID: String) -> [String] {
-        CommandCatalog.editableGestures(for: device).filter {
-            let command = appModel.gestureCommand(for: device, setID: setID, gesture: $0)
-            return !command.isEnabled && gestureMatchesSearch($0, command: command, device: device)
+            return command.isEnabled == isEnabled
+                && gestureMatchesSearch($0, command: command, searchText: searchText)
         }
     }
 
     private func gestureMatchesSearch(
         _ gesture: String,
         command: GestureCommand,
-        device: CommandDevice
+        searchText: String
     ) -> Bool {
-        let searchText = currentSearchText(for: device).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !searchText.isEmpty else { return true }
+        let normalizedSearchText = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedSearchText.isEmpty else { return true }
 
         let haystacks = [
             gesture,
@@ -556,35 +563,17 @@ struct SettingsRootView: View {
             command.openURL ?? "",
             command.openFilePath ?? "",
         ]
-        return haystacks.contains { $0.localizedCaseInsensitiveContains(searchText) }
+        return haystacks.contains { $0.localizedCaseInsensitiveContains(normalizedSearchText) }
     }
 
     private func searchTextBinding(for device: CommandDevice) -> Binding<String> {
-        Binding(
-            get: { currentSearchText(for: device) },
-            set: { setSearchText($0, for: device) }
-        )
-    }
-
-    private func currentSearchText(for device: CommandDevice) -> String {
         switch device {
         case .trackpad:
-            trackpadGestureSearchText
+            $trackpadGestureSearchText
         case .magicMouse:
-            magicMouseGestureSearchText
+            $magicMouseGestureSearchText
         case .recognition:
-            recognitionGestureSearchText
-        }
-    }
-
-    private func setSearchText(_ value: String, for device: CommandDevice) {
-        switch device {
-        case .trackpad:
-            trackpadGestureSearchText = value
-        case .magicMouse:
-            magicMouseGestureSearchText = value
-        case .recognition:
-            recognitionGestureSearchText = value
+            $recognitionGestureSearchText
         }
     }
 
@@ -599,16 +588,17 @@ struct SettingsRootView: View {
     }
 
     private func gestureCommandBinding(
-        for device: CommandDevice,
-        setID: String,
+        for context: CommandEditingContext,
         gesture: String
     ) -> Binding<GestureCommand> {
-        Binding(
+        let setID = context.selectedSet?.id ?? context.defaultSetID
+
+        return Binding(
             get: {
-                appModel.gestureCommand(for: device, setID: setID, gesture: gesture)
+                appModel.gestureCommand(for: context.device, setID: setID, gesture: gesture)
             },
             set: { updatedCommand in
-                appModel.updateGestureCommand(updatedCommand, for: device, setID: setID)
+                appModel.updateGestureCommand(updatedCommand, for: context.device, setID: setID)
             }
         )
     }
