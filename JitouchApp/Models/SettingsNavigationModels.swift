@@ -2,7 +2,6 @@ import Foundation
 
 enum JitouchSettingsPane: String, CaseIterable, Identifiable, Hashable, Sendable {
     case overview
-    case permissions
     case trackpad
     case magicMouse
     case recognition
@@ -14,8 +13,6 @@ enum JitouchSettingsPane: String, CaseIterable, Identifiable, Hashable, Sendable
         switch self {
         case .overview:
             "Overview"
-        case .permissions:
-            "Permissions & Startup"
         case .trackpad:
             "Trackpad"
         case .magicMouse:
@@ -30,9 +27,7 @@ enum JitouchSettingsPane: String, CaseIterable, Identifiable, Hashable, Sendable
     var subtitle: String {
         switch self {
         case .overview:
-            "Core status, controls, and migration progress."
-        case .permissions:
-            "Accessibility access, login items, and runtime readiness."
+            "Controls, setup, and essential runtime status."
         case .trackpad:
             "Trackpad gesture profiles and per-app overrides."
         case .magicMouse:
@@ -48,8 +43,6 @@ enum JitouchSettingsPane: String, CaseIterable, Identifiable, Hashable, Sendable
         switch self {
         case .overview:
             "square.grid.2x2"
-        case .permissions:
-            "lock.shield"
         case .trackpad:
             "rectangle.and.hand.point.up.left"
         case .magicMouse:
@@ -60,4 +53,14 @@ enum JitouchSettingsPane: String, CaseIterable, Identifiable, Hashable, Sendable
             "waveform.path.ecg"
         }
     }
+}
+
+enum JitouchSettingsSectionAnchor: String, Hashable, Sendable {
+    case overviewGeneralControls
+    case overviewPermissions
+    case overviewQuickActions
+    case overviewSetupGuide
+    case diagnosticsRecentActivity
+    case diagnosticsCoverage
+    case diagnosticsCompatibility
 }

@@ -35,13 +35,13 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
     var subtitle: String {
         switch self {
         case .welcome:
-            "What changed in the standalone app."
+            "What is already ready in the standalone app."
         case .accessibility:
-            "Grant the one permission Jitouch truly needs."
+            "Grant the permission that unlocks runtime control."
         case .startup:
-            "Decide how the app should come alive with macOS."
+            "Choose how Jitouch should start with macOS."
         case .devices:
-            "Confirm your input surfaces and profile coverage."
+            "Check active devices and profile families."
         case .finish:
             "Wrap up and jump into daily use."
         }

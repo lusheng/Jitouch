@@ -24,6 +24,8 @@ final class JitouchAppModel {
     private(set) var lastRecognizedGestureSummary = "No gestures recognized yet"
     private(set) var isOnboardingPresented = false
     private(set) var preferredSettingsPane: JitouchSettingsPane = .overview
+    private(set) var preferredSettingsSection: JitouchSettingsSectionAnchor?
+    private(set) var preferredSettingsNavigationID = UUID()
 
     private var hasAttemptedAutomaticOnboarding = false
     private var hasPerformedLaunchSetupReveal = false
@@ -254,8 +256,10 @@ final class JitouchAppModel {
         }
     }
 
-    func openSettingsPane(_ pane: JitouchSettingsPane) {
+    func openSettingsPane(_ pane: JitouchSettingsPane, section: JitouchSettingsSectionAnchor? = nil) {
         preferredSettingsPane = pane
+        preferredSettingsSection = section
+        preferredSettingsNavigationID = UUID()
         openSettingsWindow()
     }
 
@@ -292,6 +296,8 @@ final class JitouchAppModel {
     func presentOnboarding() {
         settings.hasDismissedOnboarding = false
         preferredSettingsPane = .overview
+        preferredSettingsSection = nil
+        preferredSettingsNavigationID = UUID()
         isOnboardingPresented = true
         persist()
     }
@@ -309,6 +315,8 @@ final class JitouchAppModel {
         settings.hasDismissedOnboarding = true
         isOnboardingPresented = false
         preferredSettingsPane = .overview
+        preferredSettingsSection = nil
+        preferredSettingsNavigationID = UUID()
         persist()
     }
 

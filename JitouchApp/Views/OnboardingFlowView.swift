@@ -1,6 +1,11 @@
 import SwiftUI
 
 struct OnboardingFlowView: View {
+    private enum Layout {
+        static let windowSize = CGSize(width: 1120, height: 720)
+        static let sidebarWidth: CGFloat = 348
+    }
+
     @Environment(JitouchAppModel.self) private var appModel
 
     @State private var selectedStep: OnboardingStep = .welcome
@@ -38,8 +43,17 @@ struct OnboardingFlowView: View {
                 footer
             }
         }
-        .frame(width: 920, height: 640)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .frame(width: Layout.windowSize.width, height: Layout.windowSize.height)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(red: 0.985, green: 0.988, blue: 0.994),
+                    Color.white,
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
     }
 
     private var sidebar: some View {
@@ -48,80 +62,157 @@ struct OnboardingFlowView: View {
                 Text("Setup Guide")
                     .font(.title2.weight(.semibold))
 
-                Text("A guided pass through the minimum setup needed to make the standalone Swift app feel like home.")
+                Text("A focused pass through the few macOS checks and runtime controls that still matter before daily use.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
-            ProgressView(value: appModel.onboardingProgressValue)
-                .controlSize(.large)
+            onboardingProgressPanel
 
-            Text(appModel.onboardingProgressSummary)
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(OnboardingStep.allCases) { step in
+                    stepRow(for: step)
+                }
+            }
+
+            Spacer(minLength: 12)
+
+            readinessPanel
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 24)
+        .frame(width: Layout.sidebarWidth, alignment: .topLeading)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(red: 0.956, green: 0.966, blue: 0.982),
+                    Color(red: 0.970, green: 0.975, blue: 0.985),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+    }
+
+    private var onboardingProgressPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Progress")
+                    .font(.subheadline.weight(.semibold))
+
+                Spacer()
+
+                SettingsCardStatusBadge(
+                    title: appModel.onboardingProgressSummary,
+                    tint: appModel.onboardingCoreRequirementsMet ? .green : .orange
+                )
+            }
+
+            ProgressView(value: appModel.onboardingProgressValue)
+                .tint(.accentColor)
+
+            Text("Complete the essential checks, then jump into Trackpad, Magic Mouse, or Diagnostics from the main settings window.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.white.opacity(0.82))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.72), lineWidth: 1)
+        )
+    }
+
+    private func stepRow(for step: OnboardingStep) -> some View {
+        let isSelected = selectedStep == step
+
+        return Button {
+            selectedStep = step
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(isSelected ? Color.accentColor.opacity(0.14) : Color.white.opacity(0.84))
+
+                    Image(systemName: step.symbolName)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(isSelected ? Color.accentColor : Color.primary.opacity(0.72))
+                }
+                .frame(width: 34, height: 34)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(step.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+
+                    Text(step.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(isSelected ? Color.white.opacity(0.96) : Color.white.opacity(0.54))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(
+                        isSelected ? Color.accentColor.opacity(0.18) : Color.black.opacity(0.04),
+                        lineWidth: 1
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var readinessPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Core Checks")
+                .font(.headline)
+
+            Text("The shortest possible readiness summary before gesture tuning.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: 10) {
-                ForEach(OnboardingStep.allCases) { step in
-                    Button {
-                        selectedStep = step
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: step.symbolName)
-                                .frame(width: 20)
-                                .foregroundStyle(selectedStep == step ? .blue : .secondary)
+                ForEach(appModel.onboardingChecklistItems) { item in
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: item.isComplete ? "checkmark.circle.fill" : "circle.dashed")
+                            .foregroundStyle(item.isComplete ? .green : .orange)
+                            .padding(.top, 1)
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(step.title)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.primary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.title)
+                                .font(.subheadline.weight(.semibold))
 
-                                Text(step.subtitle)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer()
-                        }
-                        .padding(12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(selectedStep == step ? Color.blue.opacity(0.10) : Color.clear)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            Spacer()
-
-            JitouchSurfaceCard(
-                title: "Core Checks",
-                subtitle: "These are the signals that matter most before deep gesture tuning.",
-                symbol: "checklist",
-                tint: .green
-            ) {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(appModel.onboardingChecklistItems) { item in
-                        HStack(alignment: .top, spacing: 10) {
-                            Image(systemName: item.isComplete ? "checkmark.circle.fill" : "circle.dashed")
-                                .foregroundStyle(item.isComplete ? .green : .orange)
-                                .padding(.top, 1)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.title)
-                                    .font(.subheadline.weight(.semibold))
-                                Text(item.detail)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+                            Text(item.detail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
                         }
                     }
                 }
             }
         }
-        .padding(24)
-        .frame(width: 290, alignment: .topLeading)
-        .background(Color(nsColor: .underPageBackgroundColor))
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.white.opacity(0.84))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.76), lineWidth: 1)
+        )
     }
 
     @ViewBuilder
@@ -141,7 +232,7 @@ struct OnboardingFlowView: View {
                     finishStep
                 }
             }
-            .padding(28)
+            .padding(30)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -150,16 +241,16 @@ struct OnboardingFlowView: View {
         VStack(alignment: .leading, spacing: 20) {
             pageHeader(
                 title: "Welcome to the Standalone App",
-                subtitle: "Jitouch has crossed the line from an old preference pane into a real menu bar app with a Swift runtime, editable profiles, and diagnostics."
+                subtitle: "The Swift rewrite is already capable enough for real use. This guide only covers the pieces that still gate smooth daily use."
             )
 
             JitouchSurfaceCard(
-                title: "What Is Already Modernized",
-                subtitle: "The heavy lifting from the old Objective-C codebase is now alive in Swift.",
+                title: "Already In Place",
+                subtitle: "The biggest modernization work is already behind you.",
                 symbol: "sparkles",
                 tint: .blue
             ) {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 12)], spacing: 12) {
+                SettingsMetricsGrid(minimumWidth: 220, spacing: 14) {
                     JitouchMetricTile(
                         title: "Gesture Runtime",
                         value: "Swift",
@@ -170,14 +261,14 @@ struct OnboardingFlowView: View {
                     JitouchMetricTile(
                         title: "Profile Editing",
                         value: "Live",
-                        detail: "Bindings, per-app overrides, and character mappings can be edited in the new UI.",
+                        detail: "Bindings, overrides, and character mappings can be edited in the new UI.",
                         symbol: "slider.horizontal.3",
                         tint: .indigo
                     )
                     JitouchMetricTile(
                         title: "Diagnostics",
                         value: "Built In",
-                        detail: "Recognition snapshots and device state are exposed without relying on old debug tooling.",
+                        detail: "Event tap counters, recent activity, and device state are already visible.",
                         symbol: "waveform.path.ecg",
                         tint: .pink
                     )
@@ -185,26 +276,25 @@ struct OnboardingFlowView: View {
             }
 
             JitouchSurfaceCard(
-                title: "What This Guide Does",
-                subtitle: "A short run through the few things that still gate daily usability.",
+                title: "What This Guide Covers",
+                subtitle: "A quick pass through the remaining setup gates, not a full product tour.",
                 symbol: "flag.checkered",
                 tint: .green
             ) {
                 VStack(alignment: .leading, spacing: 8) {
-                    onboardingBullet("Grant Accessibility so input observation and AX window actions actually work.")
-                    onboardingBullet("Decide whether Jitouch should start automatically after login.")
-                    onboardingBullet("Confirm that your active input devices and profiles are turned on.")
-                    onboardingBullet("Finish with a clear view of what is ready and what still needs real-hardware tuning.")
+                    onboardingBullet("Grant Accessibility so Jitouch can observe input and drive AX actions.")
+                    onboardingBullet("Choose whether it should come online automatically after login.")
+                    onboardingBullet("Confirm the device families you care about are enabled and visible.")
                 }
 
-                HStack(spacing: 12) {
-                    Button("Open Overview Page") {
-                        appModel.openSettingsPane(.overview)
+                SettingsActionRow {
+                    Button("Open Overview") {
+                        appModel.openSettingsPane(.overview, section: .overviewGeneralControls)
                     }
                     .buttonStyle(.bordered)
 
-                    Button("Jump to Permissions") {
-                        appModel.openSettingsPane(.permissions)
+                    Button("Open Diagnostics") {
+                        appModel.openSettingsPane(.diagnostics, section: .diagnosticsRecentActivity)
                     }
                     .buttonStyle(.borderedProminent)
                 }
@@ -231,7 +321,7 @@ struct OnboardingFlowView: View {
                     )
                 }
             ) {
-                HStack(spacing: 12) {
+                SettingsActionRow {
                     Button("Prompt for Access") {
                         appModel.requestAccessibilityPermission()
                         appModel.refresh()
@@ -243,21 +333,15 @@ struct OnboardingFlowView: View {
                     }
                     .buttonStyle(.bordered)
 
-                    Button("Re-check Runtime") {
-                        appModel.refresh()
-                        appModel.restartRuntimeServices()
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Open Permissions Page") {
-                        appModel.openSettingsPane(.permissions)
+                    Button("Open Overview Section") {
+                        appModel.openSettingsPane(.overview, section: .overviewPermissions)
                     }
                     .buttonStyle(.bordered)
                 }
 
-                Text("After you enable Jitouch in Privacy & Security > Accessibility, come back here and re-check runtime state.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                SettingsFootnoteText(
+                    text: "After enabling Jitouch in Privacy & Security > Accessibility, come back and restart the runtime if needed."
+                )
             }
         }
     }
@@ -283,26 +367,21 @@ struct OnboardingFlowView: View {
             ) {
                 Toggle("Start Jitouch automatically after login", isOn: launchAtLoginBinding)
 
-                HStack(spacing: 12) {
+                SettingsActionRow {
                     Button("Open Login Items Settings") {
                         appModel.openLoginItemsSystemSettings()
                     }
                     .buttonStyle(.bordered)
 
-                    Button("Restart Runtime Services") {
-                        appModel.restartRuntimeServices()
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Open Permissions Page") {
-                        appModel.openSettingsPane(.permissions)
+                    Button("Open Overview Section") {
+                        appModel.openSettingsPane(.overview, section: .overviewPermissions)
                     }
                     .buttonStyle(.borderedProminent)
                 }
 
-                Text("Debug builds can still show `Unavailable` or `Needs Approval` because macOS expects a properly signed app for the cleanest `SMAppService` path.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                SettingsFootnoteText(
+                    text: "Debug builds can still show `Unavailable` or `Needs Approval` because macOS expects a properly signed app for the cleanest `SMAppService` path."
+                )
             }
         }
     }
@@ -311,7 +390,7 @@ struct OnboardingFlowView: View {
         VStack(alignment: .leading, spacing: 20) {
             pageHeader(
                 title: "Devices And Profiles",
-                subtitle: "Make sure the hardware you care about is visible and that at least one profile family is enabled."
+                subtitle: "Make sure the hardware you care about is visible and that the relevant profile families are turned on."
             )
 
             JitouchSurfaceCard(
@@ -324,58 +403,45 @@ struct OnboardingFlowView: View {
                 Toggle("Enable Magic Mouse Profiles", isOn: magicMouseEnabledBinding)
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: 14)], spacing: 14) {
+            SettingsMetricsGrid(minimumWidth: 220, spacing: 14) {
                 JitouchMetricTile(
                     title: "Trackpads",
                     value: "\(appModel.deviceManager.trackpadDevices.count)",
-                    detail: "\(appModel.trackpadCommandCount) imported mappings",
+                    detail: "\(appModel.trackpadCommandCount) editable mappings",
                     symbol: "rectangle.and.hand.point.up.left",
                     tint: .blue
                 )
                 JitouchMetricTile(
                     title: "Magic Mouse",
                     value: "\(appModel.deviceManager.magicMouseDevices.count)",
-                    detail: "\(appModel.magicMouseCommandCount) imported mappings",
+                    detail: "\(appModel.magicMouseCommandCount) editable mappings",
                     symbol: "mouse",
                     tint: .mint
                 )
                 JitouchMetricTile(
                     title: "Recognition",
                     value: "\(appModel.recognitionCommandCount)",
-                    detail: "Character outputs ready to execute",
+                    detail: "Character outputs ready to edit",
                     symbol: "character.cursor.ibeam",
                     tint: .purple
                 )
             }
 
-            JitouchSurfaceCard(
-                title: "Next Tuning Pass",
-                subtitle: "Once setup is complete, the remaining improvements are mostly about feel rather than missing architecture.",
-                symbol: "scope",
-                tint: .orange
-            ) {
-                VStack(alignment: .leading, spacing: 8) {
-                    onboardingBullet("Tune trackpad and Magic Mouse gesture thresholds on real hardware.")
-                    onboardingBullet("Validate character-recognition accuracy with the built-in diagnostics pane.")
-                    onboardingBullet("Refine Move / Resize and overlay behavior until it feels closer to the legacy app.")
+            SettingsActionRow {
+                Button("Open Trackpad Page") {
+                    appModel.openSettingsPane(.trackpad)
                 }
+                .buttonStyle(.bordered)
 
-                HStack(spacing: 12) {
-                    Button("Open Trackpad Page") {
-                        appModel.openSettingsPane(.trackpad)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Open Magic Mouse Page") {
-                        appModel.openSettingsPane(.magicMouse)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Open Recognition Page") {
-                        appModel.openSettingsPane(.recognition)
-                    }
-                    .buttonStyle(.borderedProminent)
+                Button("Open Magic Mouse Page") {
+                    appModel.openSettingsPane(.magicMouse)
                 }
+                .buttonStyle(.bordered)
+
+                Button("Open Recognition Page") {
+                    appModel.openSettingsPane(.recognition)
+                }
+                .buttonStyle(.borderedProminent)
             }
         }
     }
@@ -384,14 +450,14 @@ struct OnboardingFlowView: View {
         VStack(alignment: .leading, spacing: 20) {
             pageHeader(
                 title: "Finish Setup",
-                subtitle: "You are one step away from turning this preview into a daily-use environment."
+                subtitle: "Use the guide as a launchpad, then do the fine-tuning in Overview, Diagnostics, and the device pages."
             )
 
             JitouchSurfaceCard(
                 title: "Readiness Summary",
                 subtitle: appModel.onboardingCoreRequirementsMet
                     ? "Core setup requirements are in place."
-                    : "A few core requirements still need attention before the guide can be marked complete.",
+                    : "A few essentials still need attention before you mark setup complete.",
                 symbol: appModel.onboardingCoreRequirementsMet ? "checkmark.circle.fill" : "exclamationmark.triangle.fill",
                 tint: appModel.onboardingCoreRequirementsMet ? .green : .orange
             ) {
@@ -413,28 +479,21 @@ struct OnboardingFlowView: View {
                 }
             }
 
-            JitouchSurfaceCard(
-                title: "Where To Go Next",
-                subtitle: "Use the setup guide as a launchpad into the parts of the new app you actually want to tune.",
-                symbol: "arrowshape.turn.up.right",
-                tint: .blue
-            ) {
-                HStack(spacing: 12) {
-                    Button("Open Overview") {
-                        appModel.openSettingsPane(.overview)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Open Diagnostics") {
-                        appModel.openSettingsPane(.diagnostics)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Open Trackpad") {
-                        appModel.openSettingsPane(.trackpad)
-                    }
-                    .buttonStyle(.borderedProminent)
+            SettingsActionRow {
+                Button("Open Overview") {
+                    appModel.openSettingsPane(.overview, section: .overviewGeneralControls)
                 }
+                .buttonStyle(.bordered)
+
+                Button("Open Diagnostics") {
+                    appModel.openSettingsPane(.diagnostics, section: .diagnosticsRecentActivity)
+                }
+                .buttonStyle(.bordered)
+
+                Button("Open Trackpad") {
+                    appModel.openSettingsPane(.trackpad)
+                }
+                .buttonStyle(.borderedProminent)
             }
         }
     }
@@ -468,7 +527,9 @@ struct OnboardingFlowView: View {
                 .buttonStyle(.borderedProminent)
             }
         }
-        .padding(20)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 18)
+        .background(Color.white.opacity(0.72))
     }
 
     private func pageHeader(title: String, subtitle: String) -> some View {
@@ -477,6 +538,7 @@ struct OnboardingFlowView: View {
                 .font(.largeTitle.weight(.semibold))
 
             Text(subtitle)
+                .font(.title3.weight(.regular))
                 .foregroundStyle(.secondary)
         }
     }

@@ -52,7 +52,6 @@
 		AF2D1173DF1AD6EFEADC4DCF /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 307BB5527F927A9892D4992E /* SettingsWindowController.swift */; };
 		BFD45DE45086877148D7B7F4 /* SettingsRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8A3DD7ED92A4383D585FE67 /* SettingsRootView.swift */; };
 		C00ADB7A592DB61F25560956 /* CommandFeedbackOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF42E69F84585557DAA8EBA /* CommandFeedbackOverlayController.swift */; };
-		CA940FC3DACF54E1B2F8D898 /* PermissionsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FA5B242056822FE5AD7215E /* PermissionsSettingsTab.swift */; };
 		CB24DF2306AF6F85E6F10443 /* TrackpadSwipeRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8852E51C8C98843B8A9EF817 /* TrackpadSwipeRecognizer.swift */; };
 		D1B4BBB4F913F85AD3DE15EF /* JitouchAppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FF53B21A89EF71D6A2B1E1D /* JitouchAppModel.swift */; };
 		D266EEA38CC3D75FD59C67AE /* JitouchChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE52F7B6AA83E18D2962DCC7 /* JitouchChrome.swift */; };
@@ -98,7 +97,6 @@
 		28B9C27E1038FE49AC4C5B05 /* LaunchAtLoginService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginService.swift; sourceTree = "<group>"; };
 		28D890ED669543A6748A6065 /* TrackpadGestureContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadGestureContext.swift; sourceTree = "<group>"; };
 		2A2BA40362D31EB58D79888B /* MoveResizeOverlayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoveResizeOverlayController.swift; sourceTree = "<group>"; };
-		2FA5B242056822FE5AD7215E /* PermissionsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsSettingsTab.swift; sourceTree = "<group>"; };
 		307BB5527F927A9892D4992E /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		3159951C1D10FD8C69B03532 /* TrackpadPinchRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadPinchRecognizer.swift; sourceTree = "<group>"; };
 		48A79EAF1F53A7D325A17301 /* SettingsNavigationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsNavigationModels.swift; sourceTree = "<group>"; };
@@ -176,7 +174,6 @@
 				C43213ED1AB88B34171DB0D6 /* DeviceSettingsTab.swift */,
 				BEB0BC7419E4E2F605B4A3FD /* DiagnosticsSettingsTab.swift */,
 				A9090EA9517932C9737C5405 /* OverviewSettingsTab.swift */,
-				2FA5B242056822FE5AD7215E /* PermissionsSettingsTab.swift */,
 				657BAE448E93DD0535142472 /* RecognitionSettingsTab.swift */,
 				7EB8582687E88A403B666624 /* SettingsCommandProfileViews.swift */,
 				5BB61515D298E21EE39DE362 /* SettingsGestureEditorViews.swift */,
@@ -445,7 +442,6 @@
 				88EA72D8DD38D6B15C7A256F /* OnboardingFlowView.swift in Sources */,
 				86EFDC5F931FA3506AA958CB /* OnboardingModels.swift in Sources */,
 				4832D2E1061347A17254CC7F /* OverviewSettingsTab.swift in Sources */,
-				CA940FC3DACF54E1B2F8D898 /* PermissionsSettingsTab.swift in Sources */,
 				FFD4B8E7DC67A4908AA268D8 /* RecognitionSettingsTab.swift in Sources */,
 				538E2AF7A2A9EF68394E9AE7 /* SettingsCommandProfileViews.swift in Sources */,
 				DC779393727EB0845BA75667 /* SettingsGestureEditorViews.swift in Sources */,

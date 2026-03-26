@@ -26,6 +26,8 @@ struct SettingsRootView: View {
     @Environment(CommandExecutor.self) private var commandExecutor
 
     @State private var selectedPane: JitouchSettingsPane? = .overview
+    @State private var focusedSection: JitouchSettingsSectionAnchor?
+    @State private var navigationToken = UUID()
     @State private var selectedTrackpadSetID = ""
     @State private var selectedMagicMouseSetID = ""
     @State private var selectedRecognitionSetID = ""
@@ -175,10 +177,21 @@ struct SettingsRootView: View {
         )
     }
 
+    private var selectedPaneBinding: Binding<JitouchSettingsPane?> {
+        Binding(
+            get: { selectedPane },
+            set: { newValue in
+                selectedPane = newValue
+                focusedSection = nil
+                navigationToken = UUID()
+            }
+        )
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             SettingsSidebarView(
-                selectedPane: $selectedPane
+                selectedPane: selectedPaneBinding
             ) {
                 sidebarHeader
             } footer: {
@@ -199,10 +212,13 @@ struct SettingsRootView: View {
         }
         .onAppear {
             appModel.maybePresentOnboarding()
-            selectedPane = appModel.preferredSettingsPane
+            syncPreferredNavigation()
         }
-        .onChange(of: appModel.preferredSettingsPane) { _, newValue in
-            selectedPane = newValue
+        .onChange(of: appModel.preferredSettingsPane) { _, _ in
+            syncPreferredNavigation()
+        }
+        .onChange(of: appModel.preferredSettingsNavigationID) { _, _ in
+            syncPreferredNavigation()
         }
     }
 
@@ -223,45 +239,28 @@ struct SettingsRootView: View {
                 accessibilityStatusText: appModel.accessibilityStatusText,
                 accessibilityGuidance: appModel.accessibilityGuidance,
                 launchAtLoginStatus: appModel.launchAtLoginStatus,
-                trackpadDeviceCount: deviceManager.trackpadDevices.count,
-                magicMouseDeviceCount: deviceManager.magicMouseDevices.count,
-                lastExecutedCommandSummary: commandExecutor.lastExecutedCommandSummary,
-                lastRecognizedGestureSummary: appModel.lastRecognizedGestureSummary,
                 lastReloadDate: appModel.lastReloadDate,
-                trackpadCommandCount: appModel.trackpadCommandCount,
-                magicMouseCommandCount: appModel.magicMouseCommandCount,
-                recognitionCommandCount: appModel.recognitionCommandCount,
-                trackpadCommands: appModel.settings.trackpadCommands,
-                magicMouseCommands: appModel.settings.magicMouseCommands,
-                recognitionCommands: appModel.settings.recognitionCommands,
-                lastError: appModel.lastError,
                 jitouchEnabled: enabledBinding,
+                launchAtLoginEnabled: launchAtLoginEnabledBinding,
                 trackpadEnabled: trackpadEnabledBinding,
                 magicMouseEnabled: magicMouseEnabledBinding,
                 clickSpeed: clickSpeedBinding,
                 sensitivity: sensitivityBinding,
+                focusedSection: focusedSection,
+                navigationToken: navigationToken,
                 onOpenSetupGuide: appModel.presentOnboarding,
                 onResetSetupStatus: {
                     appModel.resetOnboarding()
                     appModel.presentOnboarding()
                 },
-                onOpenAccessibilitySettings: appModel.openAccessibilitySystemSettings,
-                onRefreshPreferences: appModel.refresh,
-                onRestartRuntime: appModel.restartRuntimeServices
-            )
-        case .permissions:
-            PermissionsSettingsTab(
-                accessibilityGranted: appModel.accessibilityGranted,
-                accessibilityStatusText: appModel.accessibilityStatusText,
-                accessibilityGuidance: appModel.accessibilityGuidance,
-                launchAtLoginStatus: appModel.launchAtLoginStatus,
-                launchAtLoginEnabled: launchAtLoginEnabledBinding,
                 onPromptForAccess: {
                     appModel.requestAccessibilityPermission()
                     appModel.refresh()
                 },
                 onOpenAccessibilitySettings: appModel.openAccessibilitySystemSettings,
-                onOpenLoginItemsSettings: appModel.openLoginItemsSystemSettings
+                onOpenLoginItemsSettings: appModel.openLoginItemsSystemSettings,
+                onRefreshPreferences: appModel.refresh,
+                onRestartRuntime: appModel.restartRuntimeServices
             )
         case .trackpad:
             deviceConfigurationPane(for: .trackpad)
@@ -294,12 +293,24 @@ struct SettingsRootView: View {
                 magicMouseDevices: deviceManager.magicMouseDevices,
                 lastRecognizedGestureSummary: appModel.lastRecognizedGestureSummary,
                 lastExecutedCommandSummary: commandExecutor.lastExecutedCommandSummary,
+                trackpadCommandCount: appModel.trackpadCommandCount,
+                magicMouseCommandCount: appModel.magicMouseCommandCount,
+                recognitionCommandCount: appModel.recognitionCommandCount,
+                lastError: appModel.lastError,
                 menuBarVisibilityNote: appModel.menuBarVisibilityNote,
-                lastEventDescription: deviceManager.lastEventDescription
+                lastEventDescription: deviceManager.lastEventDescription,
+                focusedSection: focusedSection,
+                navigationToken: navigationToken
             ) {
                 characterRecognitionCalibration
             }
         }
+    }
+
+    private func syncPreferredNavigation() {
+        selectedPane = appModel.preferredSettingsPane
+        focusedSection = appModel.preferredSettingsSection
+        navigationToken = appModel.preferredSettingsNavigationID
     }
 
     private var sidebarHeader: some View {

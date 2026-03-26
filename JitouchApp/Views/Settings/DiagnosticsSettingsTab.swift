@@ -11,8 +11,14 @@ struct DiagnosticsSettingsTab<CalibrationContent: View>: View {
     let magicMouseDevices: [ConnectedDevice]
     let lastRecognizedGestureSummary: String
     let lastExecutedCommandSummary: String
+    let trackpadCommandCount: Int
+    let magicMouseCommandCount: Int
+    let recognitionCommandCount: Int
+    let lastError: String?
     let menuBarVisibilityNote: String
     let lastEventDescription: String
+    let focusedSection: JitouchSettingsSectionAnchor?
+    let navigationToken: UUID
     let calibration: CalibrationContent
 
     init(
@@ -26,8 +32,14 @@ struct DiagnosticsSettingsTab<CalibrationContent: View>: View {
         magicMouseDevices: [ConnectedDevice],
         lastRecognizedGestureSummary: String,
         lastExecutedCommandSummary: String,
+        trackpadCommandCount: Int,
+        magicMouseCommandCount: Int,
+        recognitionCommandCount: Int,
+        lastError: String?,
         menuBarVisibilityNote: String,
         lastEventDescription: String,
+        focusedSection: JitouchSettingsSectionAnchor?,
+        navigationToken: UUID,
         @ViewBuilder calibration: () -> CalibrationContent
     ) {
         self.eventTapStatusText = eventTapStatusText
@@ -40,27 +52,46 @@ struct DiagnosticsSettingsTab<CalibrationContent: View>: View {
         self.magicMouseDevices = magicMouseDevices
         self.lastRecognizedGestureSummary = lastRecognizedGestureSummary
         self.lastExecutedCommandSummary = lastExecutedCommandSummary
+        self.trackpadCommandCount = trackpadCommandCount
+        self.magicMouseCommandCount = magicMouseCommandCount
+        self.recognitionCommandCount = recognitionCommandCount
+        self.lastError = lastError
         self.menuBarVisibilityNote = menuBarVisibilityNote
         self.lastEventDescription = lastEventDescription
+        self.focusedSection = focusedSection
+        self.navigationToken = navigationToken
         self.calibration = calibration()
     }
 
     var body: some View {
-        SettingsPageScaffold(
-            title: JitouchSettingsPane.diagnostics.title,
-            subtitle: JitouchSettingsPane.diagnostics.subtitle
-        ) {
-            diagnosticsSummaryCard
-            calibration
-            connectedDevicesCard
-            compatibilityNotesCard
+        ScrollViewReader { proxy in
+            SettingsPageScaffold(
+                title: JitouchSettingsPane.diagnostics.title,
+                subtitle: JitouchSettingsPane.diagnostics.subtitle
+            ) {
+                diagnosticsSummaryCard
+                recentActivityCard
+                    .id(JitouchSettingsSectionAnchor.diagnosticsRecentActivity.rawValue)
+                importedCoverageCard
+                    .id(JitouchSettingsSectionAnchor.diagnosticsCoverage.rawValue)
+                calibration
+                connectedDevicesCard
+                compatibilityNotesCard
+                    .id(JitouchSettingsSectionAnchor.diagnosticsCompatibility.rawValue)
+            }
+            .onAppear {
+                scrollIfNeeded(using: proxy)
+            }
+            .onChange(of: navigationToken) { _, _ in
+                scrollIfNeeded(using: proxy)
+            }
         }
     }
 
     private var diagnosticsSummaryCard: some View {
         JitouchSurfaceCard(
             title: "Runtime Diagnostics",
-            subtitle: "A compact read on the observability tools now built into the Swift rewrite.",
+            subtitle: "Health, counters, and device visibility from the Swift runtime.",
             symbol: "stethoscope",
             tint: .pink
         ) {
@@ -80,11 +111,61 @@ struct DiagnosticsSettingsTab<CalibrationContent: View>: View {
                     tint: .blue
                 )
                 JitouchMetricTile(
-                    title: "Recent Gesture",
-                    value: lastRecognizedGestureSummary,
-                    detail: lastExecutedCommandSummary,
-                    symbol: "hand.tap",
+                    title: "Last Event Type",
+                    value: lastObservedEventType ?? "None",
+                    detail: "Latest touch frame: \(lastEventDescription)",
+                    symbol: "waveform.path.ecg",
                     tint: .indigo
+                )
+            }
+        }
+    }
+
+    private var recentActivityCard: some View {
+        JitouchSurfaceCard(
+            title: "Recent Activity",
+            subtitle: "The most recent command and gesture history has moved here so Overview can stay focused on controls.",
+            symbol: "clock.arrow.circlepath",
+            tint: .blue
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                SettingsTitledSummaryRow(
+                    title: "Last gesture",
+                    summary: lastRecognizedGestureSummary
+                )
+                SettingsTitledSummaryRow(
+                    title: "Last command",
+                    summary: lastExecutedCommandSummary
+                )
+                SettingsTitledSummaryRow(
+                    title: "Latest touch frame",
+                    summary: lastEventDescription
+                )
+                SettingsTitledSummaryRow(
+                    title: "Last error",
+                    summary: lastError ?? "No recent runtime error.",
+                    summaryTint: lastError == nil ? .secondary : .red
+                )
+            }
+        }
+    }
+
+    private var importedCoverageCard: some View {
+        JitouchSurfaceCard(
+            title: "Imported Coverage",
+            subtitle: "Editable command data currently loaded from the legacy preferences domain.",
+            symbol: "square.grid.2x2",
+            tint: .mint
+        ) {
+            VStack(alignment: .leading, spacing: 10) {
+                SettingsLabelValueRow(label: "Trackpad", value: "\(trackpadCommandCount)")
+                SettingsLabelValueRow(label: "Magic Mouse", value: "\(magicMouseCommandCount)")
+                SettingsLabelValueRow(label: "Character Recognition", value: "\(recognitionCommandCount)")
+
+                SettingsFootnoteText(
+                    text: totalImportedMappingCount > 0
+                        ? "\(totalImportedMappingCount) editable mappings are currently available in Swift."
+                        : "No editable mappings are currently loaded."
                 )
             }
         }
@@ -111,7 +192,7 @@ struct DiagnosticsSettingsTab<CalibrationContent: View>: View {
     private var compatibilityNotesCard: some View {
         JitouchSurfaceCard(
             title: "Compatibility Notes",
-            subtitle: "A few deliberate differences remain while the old preference pane becomes a real standalone app.",
+            subtitle: "Intentional differences and remaining modernization notes for the standalone app.",
             symbol: "info.circle",
             tint: .orange
         ) {
@@ -121,6 +202,10 @@ struct DiagnosticsSettingsTab<CalibrationContent: View>: View {
                 }
             }
         }
+    }
+
+    private var totalImportedMappingCount: Int {
+        trackpadCommandCount + magicMouseCommandCount + recognitionCommandCount
     }
 
     private var connectedDeviceMetrics: [SettingsKeyValueItem] {
@@ -136,9 +221,24 @@ struct DiagnosticsSettingsTab<CalibrationContent: View>: View {
             menuBarVisibilityNote,
             "The old preference pane's `ShowIcon` toggle is still preserved in storage, but it is not applied yet so the standalone app does not disappear.",
             "Trackpad one-finger/two-finger character recognition and Magic Mouse drag-to-character are now running in Swift. Remaining work is mostly gesture feel tuning, extra overlays, and device-by-device calibration.",
-            "Latest touch frame: \(lastEventDescription)",
-            "Last gesture event: \(lastRecognizedGestureSummary)",
-            "Last executed command: \(lastExecutedCommandSummary)",
+        ]
+    }
+
+    private func scrollIfNeeded(using proxy: ScrollViewProxy) {
+        guard let focusedSection, handledAnchors.contains(focusedSection) else { return }
+
+        DispatchQueue.main.async {
+            withAnimation(.easeInOut(duration: 0.22)) {
+                proxy.scrollTo(focusedSection.rawValue, anchor: .top)
+            }
+        }
+    }
+
+    private var handledAnchors: Set<JitouchSettingsSectionAnchor> {
+        [
+            .diagnosticsRecentActivity,
+            .diagnosticsCoverage,
+            .diagnosticsCompatibility,
         ]
     }
 }
