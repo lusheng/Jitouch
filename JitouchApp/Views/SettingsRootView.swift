@@ -255,17 +255,52 @@ struct SettingsRootView: View {
     private var detailPane: some View {
         switch selectedPane ?? .overview {
         case .overview:
-            overviewPane
+            OverviewSettingsTab(
+                hero: AnyView(overviewHero),
+                metrics: AnyView(overviewMetrics),
+                quickActions: AnyView(quickActionsCard),
+                onboardingGuide: AnyView(onboardingGuideCard),
+                setupChecklist: AnyView(setupChecklist),
+                generalSettings: AnyView(generalSettings),
+                commandCoverage: AnyView(commandCoverage),
+                lastErrorView: appModel.lastError.map { _ in
+                    AnyView(
+                        JitouchSurfaceCard(
+                            title: "Last Error",
+                            subtitle: "The most recent runtime or setup problem reported by the standalone app.",
+                            symbol: "exclamationmark.octagon.fill",
+                            tint: .red
+                        ) {
+                            Text(appModel.lastError ?? "")
+                                .foregroundStyle(.red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    )
+                }
+            )
         case .permissions:
-            permissionsPane
+            PermissionsSettingsTab(
+                permissionsAndStartup: AnyView(permissionsAndStartup)
+            )
         case .trackpad:
             deviceConfigurationPane(for: .trackpad)
         case .magicMouse:
             deviceConfigurationPane(for: .magicMouse)
         case .recognition:
-            recognitionPane
+            RecognitionSettingsTab(
+                recognitionSummary: AnyView(recognitionSummaryCard),
+                characterRecognitionSettings: AnyView(characterRecognitionSettings),
+                profileSelection: AnyView(profileSelectionCard(for: .recognition)),
+                gestureSearch: AnyView(gestureSearchCard(for: .recognition)),
+                gestureEditor: AnyView(gestureEditorSection(for: .recognition))
+            )
         case .diagnostics:
-            diagnosticsPane
+            DiagnosticsSettingsTab(
+                diagnosticsSummary: AnyView(diagnosticsSummaryCard),
+                calibration: AnyView(characterRecognitionCalibration),
+                deviceDiagnostics: AnyView(deviceDiagnostics),
+                compatibilityNotes: AnyView(compatibilityNotes)
+            )
         }
     }
 
@@ -315,110 +350,18 @@ struct SettingsRootView: View {
         }
     }
 
-    private var overviewPane: some View {
-        settingsPage(
-            title: JitouchSettingsPane.overview.title,
-            subtitle: JitouchSettingsPane.overview.subtitle
-        ) {
-            overviewHero
-            overviewMetrics
-            quickActionsCard
-            onboardingGuideCard
-            setupChecklist
-            generalSettings
-            commandCoverage
-
-            if let lastError = appModel.lastError {
-                JitouchSurfaceCard(
-                    title: "Last Error",
-                    subtitle: "The most recent runtime or setup problem reported by the standalone app.",
-                    symbol: "exclamationmark.octagon.fill",
-                    tint: .red
-                ) {
-                    Text(lastError)
-                        .foregroundStyle(.red)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-        }
-    }
-
-    private var permissionsPane: some View {
-        settingsPage(
-            title: JitouchSettingsPane.permissions.title,
-            subtitle: JitouchSettingsPane.permissions.subtitle
-        ) {
-            permissionsAndStartup
-        }
-    }
-
-    private var recognitionPane: some View {
-        settingsPage(
-            title: JitouchSettingsPane.recognition.title,
-            subtitle: JitouchSettingsPane.recognition.subtitle
-        ) {
-            recognitionSummaryCard
-            characterRecognitionSettings
-            profileSelectionCard(for: .recognition)
-            gestureSearchCard(for: .recognition)
-            gestureEditorSection(for: .recognition)
-        }
-    }
-
-    private var diagnosticsPane: some View {
-        settingsPage(
-            title: JitouchSettingsPane.diagnostics.title,
-            subtitle: JitouchSettingsPane.diagnostics.subtitle
-        ) {
-            diagnosticsSummaryCard
-            characterRecognitionCalibration
-            deviceDiagnostics
-            compatibilityNotes
-        }
-    }
-
     private func deviceConfigurationPane(for device: CommandDevice) -> some View {
         let pane: JitouchSettingsPane = device == .trackpad ? .trackpad : .magicMouse
 
-        return settingsPage(
+        return DeviceSettingsTab(
             title: pane.title,
-            subtitle: pane.subtitle
-        ) {
-            deviceSummaryCard(for: device)
-            profileSelectionCard(for: device)
-            overrideManagerCard(for: device)
-            gestureSearchCard(for: device)
-            gestureEditorSection(for: device)
-        }
-    }
-
-    private func settingsPage<Content: View>(
-        title: String,
-        subtitle: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                pageHeader(title: title, subtitle: subtitle)
-                content()
-            }
-            .frame(maxWidth: 980, alignment: .leading)
-            .padding(.horizontal, 32)
-            .padding(.vertical, 28)
-            .frame(maxWidth: .infinity, alignment: .center)
-        }
-        .background(settingsDetailBackground)
-    }
-
-    private func pageHeader(title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.largeTitle.weight(.semibold))
-
-            Text(subtitle)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-        }
+            subtitle: pane.subtitle,
+            summary: AnyView(deviceSummaryCard(for: device)),
+            profileSelection: AnyView(profileSelectionCard(for: device)),
+            overrideManager: AnyView(overrideManagerCard(for: device)),
+            gestureSearch: AnyView(gestureSearchCard(for: device)),
+            gestureEditor: AnyView(gestureEditorSection(for: device))
+        )
     }
 
     private var overviewHero: some View {
@@ -2167,17 +2110,6 @@ struct SettingsRootView: View {
 
     private var settingsSidebarSurface: Color {
         Color.white.opacity(0.54)
-    }
-
-    private var settingsDetailBackground: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.987, green: 0.989, blue: 0.994),
-                Color(red: 0.978, green: 0.982, blue: 0.989),
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
     }
 
     private var sidebarNavigationSurface: some View {
