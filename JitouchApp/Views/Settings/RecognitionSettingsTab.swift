@@ -1,9 +1,7 @@
 import SwiftUI
 
 struct RecognitionSettingsTab<
-    ProfileSelectionContent: View,
-    GestureSearchContent: View,
-    GestureEditorContent: View
+    RuleWorkspaceContent: View
 >: View {
     @Binding var trackpadCharacterRecognitionEnabled: Bool
     @Binding var oneFingerDrawingEnabled: Bool
@@ -13,9 +11,7 @@ struct RecognitionSettingsTab<
     @Binding var characterRecognitionMouseButton: Int
     let hasLiveDiagnosticsSnapshot: Bool
     @Binding var characterRecognitionDiagnosticsEnabled: Bool
-    let profileSelection: ProfileSelectionContent
-    let gestureSearch: GestureSearchContent
-    let gestureEditor: GestureEditorContent
+    let ruleWorkspace: RuleWorkspaceContent
 
     init(
         trackpadCharacterRecognitionEnabled: Binding<Bool>,
@@ -26,9 +22,7 @@ struct RecognitionSettingsTab<
         characterRecognitionMouseButton: Binding<Int>,
         hasLiveDiagnosticsSnapshot: Bool,
         characterRecognitionDiagnosticsEnabled: Binding<Bool>,
-        @ViewBuilder profileSelection: () -> ProfileSelectionContent,
-        @ViewBuilder gestureSearch: () -> GestureSearchContent,
-        @ViewBuilder gestureEditor: () -> GestureEditorContent
+        @ViewBuilder ruleWorkspace: () -> RuleWorkspaceContent
     ) {
         self._trackpadCharacterRecognitionEnabled = trackpadCharacterRecognitionEnabled
         self._oneFingerDrawingEnabled = oneFingerDrawingEnabled
@@ -38,9 +32,7 @@ struct RecognitionSettingsTab<
         self._characterRecognitionMouseButton = characterRecognitionMouseButton
         self.hasLiveDiagnosticsSnapshot = hasLiveDiagnosticsSnapshot
         self._characterRecognitionDiagnosticsEnabled = characterRecognitionDiagnosticsEnabled
-        self.profileSelection = profileSelection()
-        self.gestureSearch = gestureSearch()
-        self.gestureEditor = gestureEditor()
+        self.ruleWorkspace = ruleWorkspace()
     }
 
     var body: some View {
@@ -50,9 +42,7 @@ struct RecognitionSettingsTab<
         ) {
             recognitionSummaryCard
             characterRecognitionSettingsCard
-            profileSelection
-            gestureSearch
-            gestureEditor
+            ruleWorkspace
         }
     }
 

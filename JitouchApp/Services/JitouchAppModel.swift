@@ -39,7 +39,8 @@ final class JitouchAppModel {
         eventTapManager: EventTapManager = EventTapManager(),
         gestureEngine: GestureEngine? = nil,
         commandExecutor: CommandExecutor = CommandExecutor(),
-        magicMouseCharacterRecognitionService: MagicMouseCharacterRecognitionService? = nil
+        magicMouseCharacterRecognitionService: MagicMouseCharacterRecognitionService? = nil,
+        shouldStartRuntimeServices: Bool = true
     ) {
         self.settingsStore = settingsStore
         self.accessibilityPermissionService = accessibilityPermissionService
@@ -76,7 +77,9 @@ final class JitouchAppModel {
         self.magicMouseCharacterRecognitionService.updateSettings(settings)
         characterRecognitionDiagnostics.configure(from: settings)
         self.commandExecutor.updateSettingsSnapshot(settings)
-        startRuntimeServices()
+        if shouldStartRuntimeServices {
+            startRuntimeServices()
+        }
     }
 
     var menuBarSymbolName: String {
@@ -497,10 +500,22 @@ final class JitouchAppModel {
             return
         }
 
-        addApplicationOverride(
+        appendApplicationOverride(
             for: device,
             application: applicationName(for: url),
             path: url.standardizedFileURL.path
+        )
+    }
+
+    func addApplicationOverride(
+        for device: CommandDevice,
+        application: String,
+        path: String
+    ) {
+        appendApplicationOverride(
+            for: device,
+            application: application,
+            path: path
         )
     }
 
@@ -524,6 +539,55 @@ final class JitouchAppModel {
             set.gestures = defaultGestures
         }
         persist()
+    }
+
+    func addGestureRule(
+        for device: CommandDevice,
+        setID: String,
+        gesture: String,
+        defaultSetID: String
+    ) {
+        let currentCommand = gestureCommand(for: device, setID: setID, gesture: gesture)
+
+        let seedCommand: GestureCommand
+        if let restoredCommand = reenabledGestureCommand(from: currentCommand) {
+            seedCommand = restoredCommand
+        } else if
+            setID != defaultSetID,
+            let inheritedCommand = inheritedGestureCommand(
+                for: device,
+                defaultSetID: defaultSetID,
+                gesture: gesture
+            ) {
+            seedCommand = inheritedCommand
+        } else {
+            seedCommand = recommendedGestureCommand(for: device, gesture: gesture)
+        }
+
+        var enabledCommand = seedCommand
+        enabledCommand.gesture = gesture
+        enabledCommand.isEnabled = true
+        updateGestureCommand(enabledCommand, for: device, setID: setID)
+    }
+
+    func removeGestureRule(
+        for device: CommandDevice,
+        setID: String,
+        gesture: String,
+        defaultSetID _: String
+    ) {
+        let currentCommand = gestureCommand(for: device, setID: setID, gesture: gesture)
+        var clearedCommand = currentCommand
+        clearedCommand.gesture = gesture
+        clearedCommand.isEnabled = false
+        clearedCommand.isAction = true
+        clearedCommand.command = "-"
+        clearedCommand.modifierFlags = 0
+        clearedCommand.keyCode = 0
+        clearedCommand.openFilePath = nil
+        clearedCommand.openURL = nil
+
+        updateGestureCommand(clearedCommand, for: device, setID: setID)
     }
 
     func restartRuntimeServices() {
@@ -589,7 +653,7 @@ final class JitouchAppModel {
         settings.commandSets[device] = sets
     }
 
-    private func addApplicationOverride(
+    private func appendApplicationOverride(
         for device: CommandDevice,
         application: String,
         path: String
@@ -630,6 +694,46 @@ final class JitouchAppModel {
             return name
         }
         return url.deletingPathExtension().lastPathComponent
+    }
+
+    private func inheritedGestureCommand(
+        for device: CommandDevice,
+        defaultSetID: String,
+        gesture: String
+    ) -> GestureCommand? {
+        let defaultCommand = gestureCommand(for: device, setID: defaultSetID, gesture: gesture)
+        guard defaultCommand.isEnabled else {
+            return nil
+        }
+
+        return reenabledGestureCommand(from: defaultCommand)
+    }
+
+    private func recommendedGestureCommand(
+        for device: CommandDevice,
+        gesture: String
+    ) -> GestureCommand {
+        let action = CommandCatalog.recommendedActions(for: device, gesture: gesture).first
+            ?? CommandCatalog.supportedActionCommands.first(where: { $0 != "-" })
+            ?? "-"
+
+        return GestureCommand(
+            gesture: gesture,
+            command: action,
+            isAction: true,
+            modifierFlags: 0,
+            keyCode: 0,
+            isEnabled: true
+        )
+    }
+
+    private func reenabledGestureCommand(from command: GestureCommand) -> GestureCommand? {
+        guard var normalized = storedGestureCommand(from: command) else {
+            return nil
+        }
+
+        normalized.isEnabled = true
+        return normalized
     }
 
     private func storedGestureCommand(from command: GestureCommand) -> GestureCommand? {

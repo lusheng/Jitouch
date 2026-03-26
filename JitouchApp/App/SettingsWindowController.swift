@@ -3,6 +3,11 @@ import SwiftUI
 
 @MainActor
 final class SettingsWindowController {
+    private enum Layout {
+        static let defaultContentSize = NSSize(width: 1520, height: 920)
+        static let minimumContentSize = NSSize(width: 1440, height: 860)
+    }
+
     private let appModel: JitouchAppModel
     private var windowController: NSWindowController?
 
@@ -35,8 +40,9 @@ final class SettingsWindowController {
         let window = NSWindow(contentViewController: hostingController)
         window.title = "Jitouch Settings"
         window.identifier = NSUserInterfaceItemIdentifier("JitouchSettingsWindow")
-        window.setContentSize(NSSize(width: 1290, height: 820))
-        window.minSize = NSSize(width: 1220, height: 760)
+        window.setContentSize(Layout.defaultContentSize)
+        window.contentMinSize = Layout.minimumContentSize
+        window.minSize = window.frameRect(forContentRect: NSRect(origin: .zero, size: Layout.minimumContentSize)).size
         window.toolbarStyle = .unified
         window.titleVisibility = .visible
         window.isReleasedWhenClosed = false

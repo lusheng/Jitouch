@@ -1,10 +1,7 @@
 import SwiftUI
 
 struct DeviceSettingsTab<
-    ProfileSelectionContent: View,
-    OverrideManagerContent: View,
-    GestureSearchContent: View,
-    GestureEditorContent: View
+    RuleWorkspaceContent: View
 >: View {
     let device: CommandDevice
     let title: String
@@ -12,10 +9,7 @@ struct DeviceSettingsTab<
     let mappingCount: Int
     let connectedDeviceCount: Int
     @Binding var isProfilesEnabled: Bool
-    let profileSelection: ProfileSelectionContent
-    let overrideManager: OverrideManagerContent
-    let gestureSearch: GestureSearchContent
-    let gestureEditor: GestureEditorContent
+    let ruleWorkspace: RuleWorkspaceContent
 
     init(
         device: CommandDevice,
@@ -24,10 +18,7 @@ struct DeviceSettingsTab<
         mappingCount: Int,
         connectedDeviceCount: Int,
         isProfilesEnabled: Binding<Bool>,
-        @ViewBuilder profileSelection: () -> ProfileSelectionContent,
-        @ViewBuilder overrideManager: () -> OverrideManagerContent,
-        @ViewBuilder gestureSearch: () -> GestureSearchContent,
-        @ViewBuilder gestureEditor: () -> GestureEditorContent
+        @ViewBuilder ruleWorkspace: () -> RuleWorkspaceContent
     ) {
         self.device = device
         self.title = title
@@ -35,19 +26,13 @@ struct DeviceSettingsTab<
         self.mappingCount = mappingCount
         self.connectedDeviceCount = connectedDeviceCount
         self._isProfilesEnabled = isProfilesEnabled
-        self.profileSelection = profileSelection()
-        self.overrideManager = overrideManager()
-        self.gestureSearch = gestureSearch()
-        self.gestureEditor = gestureEditor()
+        self.ruleWorkspace = ruleWorkspace()
     }
 
     var body: some View {
         SettingsPageScaffold(title: title, subtitle: subtitle) {
             summaryCard
-            profileSelection
-            overrideManager
-            gestureSearch
-            gestureEditor
+            ruleWorkspace
         }
     }
 

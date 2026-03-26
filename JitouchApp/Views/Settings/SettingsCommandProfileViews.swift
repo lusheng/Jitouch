@@ -205,9 +205,7 @@ struct SettingsProfileEditingContextView: View {
                         .font(.subheadline.weight(.semibold))
 
                     SettingsFootnoteText(
-                        text: set.path.isEmpty
-                            ? "These mappings apply whenever no app-specific override matches the frontmost app."
-                            : "These mappings are only used when \(set.application) is frontmost."
+                        text: profileScopeDescription
                     )
 
                     if !set.path.isEmpty {
@@ -236,11 +234,7 @@ struct SettingsProfileEditingContextView: View {
 
             SettingsActionRow(spacing: 10) {
                 if set.path.isEmpty {
-                    SettingsFootnoteText(
-                        text: overrideCount == 0
-                            ? "No app-specific overrides are configured for this device yet."
-                            : "\(overrideCount) app override\(overrideCount == 1 ? "" : "s") currently branch from this default profile."
-                    )
+                    SettingsFootnoteText(text: defaultProfileNote)
                 } else {
                     Button("Back to Default", action: onBackToDefault)
                         .buttonStyle(.bordered)
@@ -268,6 +262,30 @@ struct SettingsProfileEditingContextView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(tint.opacity(0.20), lineWidth: 1)
         )
+    }
+
+    private var profileScopeDescription: String {
+        if device == .recognition {
+            return "Character mappings stay global for predictable recognition and do not use app-specific overrides."
+        }
+
+        if set.path.isEmpty {
+            return "These mappings apply whenever no app-specific override matches the frontmost app."
+        }
+
+        return "These mappings are only used when \(set.application) is frontmost."
+    }
+
+    private var defaultProfileNote: String {
+        if device == .recognition {
+            return "Recognition rules are edited globally for all applications."
+        }
+
+        if overrideCount == 0 {
+            return "No app-specific overrides are configured for this device yet."
+        }
+
+        return "\(overrideCount) app override\(overrideCount == 1 ? "" : "s") currently branch from this default profile."
     }
 }
 
@@ -374,7 +392,7 @@ private struct SettingsOverrideRow: View {
     }
 }
 
-private struct SettingsApplicationIconBadge: View {
+struct SettingsApplicationIconBadge: View {
     let application: String
     let path: String
     let tint: Color
