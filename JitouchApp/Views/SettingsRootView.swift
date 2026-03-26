@@ -157,10 +157,12 @@ struct SettingsRootView: View {
     var body: some View {
         HStack(spacing: 0) {
             SettingsSidebarView(
-                header: AnyView(sidebarHeader),
-                footer: AnyView(sidebarFooter),
                 selectedPane: $selectedPane
-            )
+            ) {
+                sidebarHeader
+            } footer: {
+                sidebarFooter
+            }
                 .frame(width: 320, alignment: .topLeading)
 
             Divider()
@@ -246,12 +248,17 @@ struct SettingsRootView: View {
             deviceConfigurationPane(for: .magicMouse)
         case .recognition:
             RecognitionSettingsTab(
-                recognitionSummary: AnyView(recognitionSummaryCard),
-                characterRecognitionSettings: AnyView(characterRecognitionSettings),
-                profileSelection: AnyView(profileSelectionCard(for: .recognition)),
-                gestureSearch: AnyView(gestureSearchCard(for: .recognition)),
-                gestureEditor: AnyView(gestureEditorSection(for: .recognition))
-            )
+            ) {
+                recognitionSummaryCard
+            } characterRecognitionSettings: {
+                characterRecognitionSettings
+            } profileSelection: {
+                profileSelectionCard(for: .recognition)
+            } gestureSearch: {
+                gestureSearchCard(for: .recognition)
+            } gestureEditor: {
+                gestureEditorSection(for: .recognition)
+            }
         case .diagnostics:
             DiagnosticsSettingsTab(
                 eventTapStatusText: eventTapManager.statusText,
@@ -324,12 +331,17 @@ struct SettingsRootView: View {
         return DeviceSettingsTab(
             title: pane.title,
             subtitle: pane.subtitle,
-            summary: AnyView(deviceSummaryCard(for: device)),
-            profileSelection: AnyView(profileSelectionCard(for: device)),
-            overrideManager: AnyView(overrideManagerCard(for: device)),
-            gestureSearch: AnyView(gestureSearchCard(for: device)),
-            gestureEditor: AnyView(gestureEditorSection(for: device))
-        )
+        ) {
+            deviceSummaryCard(for: device)
+        } profileSelection: {
+            profileSelectionCard(for: device)
+        } overrideManager: {
+            overrideManagerCard(for: device)
+        } gestureSearch: {
+            gestureSearchCard(for: device)
+        } gestureEditor: {
+            gestureEditorSection(for: device)
+        }
     }
 
     private var characterRecognitionSettings: some View {

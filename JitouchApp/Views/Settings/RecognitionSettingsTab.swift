@@ -1,11 +1,31 @@
 import SwiftUI
 
-struct RecognitionSettingsTab: View {
-    let recognitionSummary: AnyView
-    let characterRecognitionSettings: AnyView
-    let profileSelection: AnyView
-    let gestureSearch: AnyView
-    let gestureEditor: AnyView
+struct RecognitionSettingsTab<
+    RecognitionSummaryContent: View,
+    CharacterRecognitionSettingsContent: View,
+    ProfileSelectionContent: View,
+    GestureSearchContent: View,
+    GestureEditorContent: View
+>: View {
+    let recognitionSummary: RecognitionSummaryContent
+    let characterRecognitionSettings: CharacterRecognitionSettingsContent
+    let profileSelection: ProfileSelectionContent
+    let gestureSearch: GestureSearchContent
+    let gestureEditor: GestureEditorContent
+
+    init(
+        @ViewBuilder recognitionSummary: () -> RecognitionSummaryContent,
+        @ViewBuilder characterRecognitionSettings: () -> CharacterRecognitionSettingsContent,
+        @ViewBuilder profileSelection: () -> ProfileSelectionContent,
+        @ViewBuilder gestureSearch: () -> GestureSearchContent,
+        @ViewBuilder gestureEditor: () -> GestureEditorContent
+    ) {
+        self.recognitionSummary = recognitionSummary()
+        self.characterRecognitionSettings = characterRecognitionSettings()
+        self.profileSelection = profileSelection()
+        self.gestureSearch = gestureSearch()
+        self.gestureEditor = gestureEditor()
+    }
 
     var body: some View {
         SettingsPageScaffold(

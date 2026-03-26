@@ -1,9 +1,19 @@
 import SwiftUI
 
-struct SettingsSidebarView: View {
-    let header: AnyView
-    let footer: AnyView
+struct SettingsSidebarView<Header: View, Footer: View>: View {
+    let header: Header
+    let footer: Footer
     @Binding var selectedPane: JitouchSettingsPane?
+
+    init(
+        selectedPane: Binding<JitouchSettingsPane?>,
+        @ViewBuilder header: () -> Header,
+        @ViewBuilder footer: () -> Footer
+    ) {
+        self._selectedPane = selectedPane
+        self.header = header()
+        self.footer = footer()
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
