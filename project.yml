@@ -22,6 +22,7 @@ settings:
       - -weak_framework
       - MultitouchSupport
     CLANG_ENABLE_MODULES: YES
+    DEFINES_MODULE: YES
     ENABLE_HARDENED_RUNTIME: YES
     ENABLE_APP_SANDBOX: NO
     CODE_SIGN_STYLE: Automatic
@@ -51,6 +52,21 @@ targets:
       - path: JitouchApp/Resources
         excludes:
           - Info.plist
+  JitouchTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "15.0"
+    settings:
+      base:
+        PRODUCT_NAME: JitouchTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.jitouch.JitouchTests
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: ""
+        SWIFT_OBJC_BRIDGING_HEADER: ""
+    sources:
+      - path: JitouchTests
+    dependencies:
+      - target: Jitouch
 schemes:
   Jitouch:
     build:
@@ -58,3 +74,7 @@ schemes:
         Jitouch: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - name: JitouchTests

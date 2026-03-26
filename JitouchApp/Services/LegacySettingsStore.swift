@@ -1,10 +1,23 @@
 import Foundation
 
 struct LegacySettingsStore {
-    let domainIdentifier = "com.jitouch.Jitouch"
+    let domainIdentifier: String
+    private let preferencesURLOverride: URL?
+
+    init(
+        domainIdentifier: String = "com.jitouch.Jitouch",
+        preferencesURLOverride: URL? = nil
+    ) {
+        self.domainIdentifier = domainIdentifier
+        self.preferencesURLOverride = preferencesURLOverride
+    }
 
     var preferencesURL: URL {
-        URL(
+        if let preferencesURLOverride {
+            return preferencesURLOverride
+        }
+
+        return URL(
             fileURLWithPath: NSString(
                 string: "~/Library/Preferences/\(domainIdentifier).plist"
             ).expandingTildeInPath
