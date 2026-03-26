@@ -239,25 +239,19 @@ struct OverviewSettingsTab: View {
                 Toggle("Enable Trackpad Profiles", isOn: $trackpadEnabled)
                 Toggle("Enable Magic Mouse Profiles", isOn: $magicMouseEnabled)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Click Speed")
-                        Spacer()
-                        Text(clickSpeed, format: .number.precision(.fractionLength(2)))
-                            .foregroundStyle(.secondary)
-                    }
-                    Slider(value: $clickSpeed, in: 0.05 ... 0.60)
-                }
+                SettingsSliderControlRow(
+                    title: "Click Speed",
+                    value: $clickSpeed,
+                    in: 0.05 ... 0.60,
+                    valueText: clickSpeed.formatted(.number.precision(.fractionLength(2)))
+                )
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Sensitivity")
-                        Spacer()
-                        Text(sensitivity, format: .number.precision(.fractionLength(2)))
-                            .foregroundStyle(.secondary)
-                    }
-                    Slider(value: $sensitivity, in: 1.0 ... 8.0)
-                }
+                SettingsSliderControlRow(
+                    title: "Sensitivity",
+                    value: $sensitivity,
+                    in: 1.0 ... 8.0,
+                    valueText: sensitivity.formatted(.number.precision(.fractionLength(2)))
+                )
 
                 HStack(spacing: 12) {
                     Button("Reload Preferences from Disk", action: onRefreshPreferences)

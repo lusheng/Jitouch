@@ -20,44 +20,35 @@ struct SettingsCharacterRecognitionCalibrationCard: View {
             VStack(alignment: .leading, spacing: 14) {
                 Toggle("Enable Live Character Diagnostics", isOn: $isDiagnosticsEnabled)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Hint Delay")
-                        Spacer()
-                        Text(hintDelay, format: .number.precision(.fractionLength(2)))
-                            .foregroundStyle(.secondary)
-                    }
-                    Slider(value: $hintDelay, in: 0.10 ... 0.60)
-                }
+                SettingsSliderControlRow(
+                    title: "Hint Delay",
+                    value: $hintDelay,
+                    in: 0.10 ... 0.60,
+                    valueText: hintDelay.formatted(.number.precision(.fractionLength(2)))
+                )
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Trackpad Min Travel")
-                        Spacer()
-                        Text(trackpadMinimumTravel, format: .number.precision(.fractionLength(5)))
-                            .foregroundStyle(.secondary)
-                    }
-                    Slider(value: $trackpadMinimumTravel, in: 0.00005 ... 0.0010)
-                }
+                SettingsSliderControlRow(
+                    title: "Trackpad Min Travel",
+                    value: $trackpadMinimumTravel,
+                    in: 0.00005 ... 0.0010,
+                    valueText: trackpadMinimumTravel.formatted(.number.precision(.fractionLength(5)))
+                )
 
-                Stepper(
-                    "Trackpad Validation Segments: \(trackpadValidationSegments)",
+                SettingsStepperControlRow(
+                    title: "Trackpad Validation Segments",
                     value: $trackpadValidationSegments,
                     in: 2 ... 10
                 )
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Magic Mouse Min Travel")
-                        Spacer()
-                        Text(magicMouseMinimumTravel, format: .number.precision(.fractionLength(2)))
-                            .foregroundStyle(.secondary)
-                    }
-                    Slider(value: $magicMouseMinimumTravel, in: 1.0 ... 15.0)
-                }
+                SettingsSliderControlRow(
+                    title: "Magic Mouse Min Travel",
+                    value: $magicMouseMinimumTravel,
+                    in: 1.0 ... 15.0,
+                    valueText: magicMouseMinimumTravel.formatted(.number.precision(.fractionLength(2)))
+                )
 
-                Stepper(
-                    "Magic Mouse Activation Segments: \(magicMouseActivationSegments)",
+                SettingsStepperControlRow(
+                    title: "Magic Mouse Activation Segments",
                     value: $magicMouseActivationSegments,
                     in: 2 ... 8
                 )

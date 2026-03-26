@@ -142,6 +142,72 @@ struct SettingsBulletNoteRow: View {
     }
 }
 
+struct SettingsSliderControlRow: View {
+    let title: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let valueText: String
+    let step: Double?
+
+    init(
+        title: String,
+        value: Binding<Double>,
+        in range: ClosedRange<Double>,
+        valueText: String,
+        step: Double? = nil
+    ) {
+        self.title = title
+        self._value = value
+        self.range = range
+        self.valueText = valueText
+        self.step = step
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                Spacer()
+                Text(valueText)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let step {
+                Slider(value: $value, in: range, step: step)
+            } else {
+                Slider(value: $value, in: range)
+            }
+        }
+    }
+}
+
+struct SettingsStepperControlRow: View {
+    let title: String
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    let valueText: String
+
+    init(
+        title: String,
+        value: Binding<Int>,
+        in range: ClosedRange<Int>,
+        valueText: String? = nil
+    ) {
+        self.title = title
+        self._value = value
+        self.range = range
+        self.valueText = valueText ?? "\(value.wrappedValue)"
+    }
+
+    var body: some View {
+        Stepper(
+            "\(title): \(valueText)",
+            value: $value,
+            in: range
+        )
+    }
+}
+
 struct SettingsMonospacedReadoutSection: View {
     let title: String
     let text: String

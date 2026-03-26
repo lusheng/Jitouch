@@ -106,15 +106,12 @@ struct RecognitionSettingsTab<
                     .disabled(!trackpadCharacterRecognitionEnabled)
                 Toggle("Enable Magic Mouse Character Recognition", isOn: $magicMouseCharacterRecognitionEnabled)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Index / Ring Distance")
-                        Spacer()
-                        Text(characterRecognitionDistance, format: .number.precision(.fractionLength(2)))
-                            .foregroundStyle(.secondary)
-                    }
-                    Slider(value: $characterRecognitionDistance, in: 0.18 ... 0.50)
-                }
+                SettingsSliderControlRow(
+                    title: "Index / Ring Distance",
+                    value: $characterRecognitionDistance,
+                    in: 0.18 ... 0.50,
+                    valueText: characterRecognitionDistance.formatted(.number.precision(.fractionLength(2)))
+                )
 
                 Picker("Mouse Recognition Button", selection: $characterRecognitionMouseButton) {
                     Text("Middle Click").tag(0)
