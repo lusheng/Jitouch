@@ -75,9 +75,7 @@ struct OnboardingFlowView: View {
                 }
             }
 
-            Spacer(minLength: 12)
-
-            readinessPanel
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 24)
@@ -114,6 +112,7 @@ struct OnboardingFlowView: View {
             Text("Complete the essential checks, then jump into Trackpad, Magic Mouse, or Diagnostics from the main settings window.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(18)
         .background(
@@ -173,46 +172,6 @@ struct OnboardingFlowView: View {
             )
         }
         .buttonStyle(.plain)
-    }
-
-    private var readinessPanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Core Checks")
-                .font(.headline)
-
-            Text("The shortest possible readiness summary before gesture tuning.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(appModel.onboardingChecklistItems) { item in
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: item.isComplete ? "checkmark.circle.fill" : "circle.dashed")
-                            .foregroundStyle(item.isComplete ? .green : .orange)
-                            .padding(.top, 1)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.title)
-                                .font(.subheadline.weight(.semibold))
-
-                            Text(item.detail)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.white.opacity(0.84))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.76), lineWidth: 1)
-        )
     }
 
     @ViewBuilder
