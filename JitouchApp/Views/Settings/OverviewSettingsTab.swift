@@ -112,7 +112,7 @@ struct OverviewSettingsTab: View {
                 )
             }
         ) {
-            HStack(spacing: 12) {
+            SettingsActionRow {
                 Button(hasCompletedOnboarding ? "Replay Setup Guide" : "Open Setup Guide", action: onOpenSetupGuide)
                     .buttonStyle(.borderedProminent)
 
@@ -208,7 +208,7 @@ struct OverviewSettingsTab: View {
             symbol: "bolt.circle",
             tint: .blue
         ) {
-            HStack(spacing: 12) {
+            SettingsActionRow {
                 Button("Reload Preferences", action: onRefreshPreferences)
                     .buttonStyle(.bordered)
 
@@ -220,9 +220,9 @@ struct OverviewSettingsTab: View {
             }
 
             if let lastReloadDate {
-                Text("Last refreshed \(lastReloadDate.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                SettingsFootnoteText(
+                    text: "Last refreshed \(lastReloadDate.formatted(date: .abbreviated, time: .shortened))"
+                )
             }
         }
     }
@@ -253,7 +253,7 @@ struct OverviewSettingsTab: View {
                     valueText: sensitivity.formatted(.number.precision(.fractionLength(2)))
                 )
 
-                HStack(spacing: 12) {
+                SettingsActionRow {
                     Button("Reload Preferences from Disk", action: onRefreshPreferences)
                     Button("Restart Runtime Services", action: onRestartRuntime)
                 }

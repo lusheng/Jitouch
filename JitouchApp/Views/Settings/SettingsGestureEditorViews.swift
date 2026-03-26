@@ -69,9 +69,9 @@ struct SettingsGestureEditingSection<GestureEditorContent: View>: View {
                     )
 
                     if isFiltering {
-                        Text("Showing \(activeGestures.count + inactiveGestures.count) matching gestures for “\(searchText)”")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        SettingsFootnoteText(
+                            text: "Showing \(activeGestures.count + inactiveGestures.count) matching gestures for “\(searchText)”"
+                        )
                     }
 
                     if activeGestures.isEmpty && !isFiltering {
@@ -157,9 +157,7 @@ struct SettingsGestureEditorCard: View {
             }
             .pickerStyle(.segmented)
 
-            Text(commandKindDescription)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            SettingsFootnoteText(text: commandKindDescription)
 
             commandConfiguration
         }
@@ -224,9 +222,7 @@ struct SettingsGestureEditorCard: View {
                 .pickerStyle(.menu)
 
                 if command.command != "-" {
-                    Text("Selected action: \(command.command)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    SettingsFootnoteText(text: "Selected action: \(command.command)")
                 }
             }
         case .shortcut:
@@ -236,13 +232,13 @@ struct SettingsGestureEditorCard: View {
                     modifierFlags: modifierFlagsBinding
                 )
 
-                Text("Click the field, then press the shortcut you want. Press Escape to cancel or Delete to clear it.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                SettingsFootnoteText(
+                    text: "Click the field, then press the shortcut you want. Press Escape to cancel or Delete to clear it."
+                )
             }
         case .openURL:
             VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 10) {
+                SettingsActionRow(spacing: 10) {
                     TextField(
                         "https://example.com",
                         text: openURLBinding
@@ -254,13 +250,13 @@ struct SettingsGestureEditorCard: View {
                         .disabled(!isOpenURLValid)
                 }
 
-                Text("Use a full URL including the scheme. This is useful for dashboards, docs, or deep links you want under a gesture.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                SettingsFootnoteText(
+                    text: "Use a full URL including the scheme. This is useful for dashboards, docs, or deep links you want under a gesture."
+                )
             }
         case .openFile:
             VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 10) {
+                SettingsActionRow(spacing: 10) {
                     TextField(
                         "/Applications/Safari.app",
                         text: openFilePathBinding
@@ -278,9 +274,9 @@ struct SettingsGestureEditorCard: View {
                     }
                 }
 
-                Text("Point the gesture at an app, document, or script on disk. `Browse…` is usually faster than pasting full paths.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                SettingsFootnoteText(
+                    text: "Point the gesture at an app, document, or script on disk. `Browse…` is usually faster than pasting full paths."
+                )
             }
         }
     }

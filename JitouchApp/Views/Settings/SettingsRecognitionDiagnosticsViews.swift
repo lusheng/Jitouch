@@ -53,12 +53,12 @@ struct SettingsCharacterRecognitionCalibrationCard: View {
                     in: 2 ... 8
                 )
 
-                HStack(spacing: 12) {
+                SettingsActionMessageRow {
                     Button("Clear Diagnostics", action: onClearDiagnostics)
-
-                    Text("These controls are stored in the same preference domain, so calibration survives restarts.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                } message: {
+                    SettingsFootnoteText(
+                        text: "These controls are stored in the same preference domain, so calibration survives restarts."
+                    )
                 }
 
                 Divider()

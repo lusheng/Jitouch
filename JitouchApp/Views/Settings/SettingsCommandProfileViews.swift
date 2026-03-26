@@ -107,13 +107,13 @@ struct SettingsProfileSelectionCard: View {
                     }
 
                     if device == .recognition {
-                        Text("Character mappings reuse the same profile model, but usually stay global to keep recognition predictable.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        SettingsFootnoteText(
+                            text: "Character mappings reuse the same profile model, but usually stay global to keep recognition predictable."
+                        )
                     } else {
-                        Text("Use App Overrides below to add app-specific profiles, switch to them, reveal the target app, or remove them.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        SettingsFootnoteText(
+                            text: "Use App Overrides below to add app-specific profiles, switch to them, reveal the target app, or remove them."
+                        )
                     }
                 }
             }
@@ -144,7 +144,7 @@ struct SettingsOverrideManagerCard: View {
             }
         ) {
             VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 12) {
+                SettingsActionRow {
                     Button("Add App Override…", action: onAddOverride)
                         .buttonStyle(.borderedProminent)
                 }
@@ -204,13 +204,11 @@ struct SettingsProfileEditingContextView: View {
                     Text(set.path.isEmpty ? "Editing All Applications" : "Editing \(set.application) Override")
                         .font(.subheadline.weight(.semibold))
 
-                    Text(
-                        set.path.isEmpty
+                    SettingsFootnoteText(
+                        text: set.path.isEmpty
                             ? "These mappings apply whenever no app-specific override matches the frontmost app."
                             : "These mappings are only used when \(set.application) is frontmost."
                     )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
 
                     if !set.path.isEmpty {
                         Text(set.path)
@@ -229,24 +227,20 @@ struct SettingsProfileEditingContextView: View {
             }
 
             if !set.path.isEmpty {
-                Text(
-                    differenceCount == 0
+                SettingsFootnoteText(
+                    text: differenceCount == 0
                         ? "This override currently matches the All Applications profile."
                         : "\(differenceCount) gesture\(differenceCount == 1 ? "" : "s") currently differ from All Applications."
                 )
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
 
-            HStack(spacing: 10) {
+            SettingsActionRow(spacing: 10) {
                 if set.path.isEmpty {
-                    Text(
-                        overrideCount == 0
+                    SettingsFootnoteText(
+                        text: overrideCount == 0
                             ? "No app-specific overrides are configured for this device yet."
                             : "\(overrideCount) app override\(overrideCount == 1 ? "" : "s") currently branch from this default profile."
                     )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
                 } else {
                     Button("Back to Default", action: onBackToDefault)
                         .buttonStyle(.bordered)
@@ -295,9 +289,9 @@ struct SettingsGestureSearchCard: View {
                 )
                 .textFieldStyle(.roundedBorder)
 
-                Text("Search matches gesture names and currently assigned commands, so you can jump straight to one mapping instead of scrolling through the whole profile.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                SettingsFootnoteText(
+                    text: "Search matches gesture names and currently assigned commands, so you can jump straight to one mapping instead of scrolling through the whole profile."
+                )
             }
         }
     }
@@ -360,7 +354,7 @@ private struct SettingsOverrideRow: View {
                 Spacer(minLength: 12)
             }
 
-            HStack(spacing: 10) {
+            SettingsActionRow(spacing: 10) {
                 if isSelected {
                     Button("Currently Editing", action: onSelect)
                         .buttonStyle(.borderedProminent)

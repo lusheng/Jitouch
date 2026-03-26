@@ -36,7 +36,7 @@ struct PermissionsSettingsTab: View {
             Text(accessibilityGuidance)
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: 12) {
+            SettingsActionRow {
                 Button("Prompt for Access", action: onPromptForAccess)
                     .buttonStyle(.borderedProminent)
 
@@ -45,9 +45,9 @@ struct PermissionsSettingsTab: View {
             }
 
             if !accessibilityGranted {
-                Text("After macOS opens Privacy & Security, enable Jitouch in Accessibility and then come back here to restart services.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                SettingsFootnoteText(
+                    text: "After macOS opens Privacy & Security, enable Jitouch in Accessibility and then come back here to restart services."
+                )
             }
         }
     }
@@ -70,20 +70,21 @@ struct PermissionsSettingsTab: View {
             Text(launchAtLoginStatus.detail)
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: 12) {
+            SettingsActionMessageRow {
                 Button("Open Login Items Settings", action: onOpenLoginItemsSettings)
                     .buttonStyle(.bordered)
-
+            } message: {
                 if launchAtLoginStatus.requiresApproval {
-                    Text("Approval is still pending in System Settings.")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
+                    SettingsFootnoteText(
+                        text: "Approval is still pending in System Settings.",
+                        tint: .orange
+                    )
                 }
             }
 
-            Text("Debug builds can still report unavailable or approval-needed states because `SMAppService` behaves best with a properly signed app.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            SettingsFootnoteText(
+                text: "Debug builds can still report unavailable or approval-needed states because `SMAppService` behaves best with a properly signed app."
+            )
         }
     }
 }

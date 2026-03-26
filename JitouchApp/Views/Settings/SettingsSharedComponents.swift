@@ -127,6 +127,67 @@ struct SettingsSecondaryPlaceholderText: View {
     }
 }
 
+struct SettingsFootnoteText: View {
+    let text: String
+    let tint: Color
+
+    init(text: String, tint: Color = .secondary) {
+        self.text = text
+        self.tint = tint
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(tint)
+    }
+}
+
+struct SettingsActionRow<Content: View>: View {
+    let spacing: CGFloat
+    let content: Content
+
+    init(
+        spacing: CGFloat = 12,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.spacing = spacing
+        self.content = content()
+    }
+
+    var body: some View {
+        HStack(spacing: spacing) {
+            content
+        }
+    }
+}
+
+struct SettingsActionMessageRow<Actions: View, Message: View>: View {
+    let spacing: CGFloat
+    let alignment: VerticalAlignment
+    let actions: Actions
+    let message: Message
+
+    init(
+        spacing: CGFloat = 12,
+        alignment: VerticalAlignment = .center,
+        @ViewBuilder actions: () -> Actions,
+        @ViewBuilder message: () -> Message
+    ) {
+        self.spacing = spacing
+        self.alignment = alignment
+        self.actions = actions()
+        self.message = message()
+    }
+
+    var body: some View {
+        HStack(alignment: alignment, spacing: spacing) {
+            actions
+            message
+        }
+    }
+}
+
 struct SettingsBulletNoteRow: View {
     let text: String
 
