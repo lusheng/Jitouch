@@ -1,12 +1,28 @@
 import AppKit
 
+func magicMouseOverlayCanvasFrame(for screenFrames: [CGRect]) -> CGRect {
+    guard let firstFrame = screenFrames.first else {
+        return CGRect(x: 0, y: 0, width: 1, height: 1)
+    }
+
+    return screenFrames.dropFirst().reduce(firstFrame) { partial, frame in
+        partial.union(frame)
+    }
+}
+
+func magicMouseOverlayLocalPoint(screenPoint: CGPoint, panelFrame: CGRect) -> CGPoint {
+    CGPoint(
+        x: screenPoint.x - panelFrame.minX,
+        y: screenPoint.y - panelFrame.minY
+    )
+}
+
 @MainActor
 final class CharacterRecognitionOverlayController {
     private let panel: NSPanel
     private let overlayView = CharacterRecognitionOverlayView()
 
     private let trackpadPanelSize = CGSize(width: 550, height: 400)
-    private let magicMousePanelSize = CGSize(width: 800, height: 800)
 
     init() {
         panel = NSPanel(
@@ -43,16 +59,15 @@ final class CharacterRecognitionOverlayController {
     }
 
     func beginMagicMousePath(at screenPoint: CGPoint) {
-        configurePanel(size: magicMousePanelSize)
+        let canvasFrame = magicMouseOverlayCanvasFrame(for: NSScreen.screens.map(\.frame))
+        configurePanel(frame: canvasFrame)
         overlayView.reset()
-        overlayView.addRelativePoint(.zero)
-        positionMagicMousePanel(around: screenPoint)
+        overlayView.addMagicMouseScreenPoint(screenPoint, panelFrame: canvasFrame)
     }
 
-    func updateMagicMousePath(relativePoint: CGPoint, screenPoint: CGPoint, hint: String?, activated: Bool) {
-        overlayView.addRelativePoint(relativePoint)
+    func updateMagicMousePath(screenPoint: CGPoint, hint: String?, activated: Bool) {
+        overlayView.addMagicMouseScreenPoint(screenPoint, panelFrame: panel.frame)
         overlayView.hintText = hint ?? ""
-        positionMagicMousePanel(around: screenPoint)
         if activated, !panel.isVisible {
             panel.orderFrontRegardless()
         }
@@ -75,6 +90,12 @@ final class CharacterRecognitionOverlayController {
         overlayView.needsDisplay = true
     }
 
+    private func configurePanel(frame: CGRect) {
+        panel.setFrame(frame, display: false)
+        overlayView.frame = CGRect(origin: .zero, size: frame.size)
+        overlayView.needsDisplay = true
+    }
+
     private func positionTrackpadPanelOnActiveScreen() {
         let location = currentMouseLocation()
         let screen = NSScreen.screens.first { NSMouseInRect(location, $0.frame, false) } ?? NSScreen.main
@@ -82,14 +103,6 @@ final class CharacterRecognitionOverlayController {
         let origin = CGPoint(
             x: frame.midX - (trackpadPanelSize.width / 2),
             y: frame.midY - (trackpadPanelSize.height / 2)
-        )
-        panel.setFrameOrigin(origin)
-    }
-
-    private func positionMagicMousePanel(around screenPoint: CGPoint) {
-        let origin = CGPoint(
-            x: screenPoint.x - (magicMousePanelSize.width / 2),
-            y: screenPoint.y - (magicMousePanelSize.height / 2)
         )
         panel.setFrameOrigin(origin)
     }
@@ -130,11 +143,8 @@ private final class CharacterRecognitionOverlayView: NSView {
         needsDisplay = true
     }
 
-    func addRelativePoint(_ relativePoint: CGPoint) {
-        let point = CGPoint(
-            x: bounds.midX + relativePoint.x,
-            y: bounds.midY + relativePoint.y
-        )
+    func addMagicMouseScreenPoint(_ screenPoint: CGPoint, panelFrame: CGRect) {
+        let point = magicMouseOverlayLocalPoint(screenPoint: screenPoint, panelFrame: panelFrame)
         points.append(point)
         needsDisplay = true
     }
