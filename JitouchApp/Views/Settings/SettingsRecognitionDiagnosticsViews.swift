@@ -95,57 +95,31 @@ private struct SettingsLiveRecognitionSnapshotView: View {
             Text("Live Snapshot")
                 .font(.headline)
 
-            Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 8) {
-                GridRow {
-                    Text("Source")
-                        .foregroundStyle(.secondary)
-                    Text(snapshot.source.title)
-                }
-                GridRow {
-                    Text("Phase")
-                        .foregroundStyle(.secondary)
-                    Text(snapshot.phase.title)
-                }
-                GridRow {
-                    Text("Segments")
-                        .foregroundStyle(.secondary)
-                    Text("\(snapshot.segmentCount)")
-                }
-                GridRow {
-                    Text("Hint")
-                        .foregroundStyle(.secondary)
-                    Text(snapshot.hint ?? "None")
-                }
-                GridRow {
-                    Text("Recognized")
-                        .foregroundStyle(.secondary)
-                    Text(snapshot.recognizedCharacter?.value ?? "Pending")
-                }
-                GridRow {
-                    Text("Reason")
-                        .foregroundStyle(.secondary)
-                    Text(snapshot.reason ?? "None")
-                }
-                GridRow {
-                    Text("Span")
-                        .foregroundStyle(.secondary)
-                    Text(snapshot.spanDescription)
-                }
-                GridRow {
-                    Text("Updated")
-                        .foregroundStyle(.secondary)
-                    Text(snapshot.timestamp.formatted(date: .omitted, time: .standard))
-                }
-            }
+            SettingsKeyValueGrid(items: summaryItems)
 
             if !snapshot.candidates.isEmpty {
-                Text("Top Candidates")
-                    .font(.headline)
-
-                Text(snapshot.candidateLines)
-                    .font(.caption.monospaced())
+                SettingsMonospacedReadoutSection(
+                    title: "Top Candidates",
+                    text: snapshot.candidateLines
+                )
             }
         }
+    }
+
+    private var summaryItems: [SettingsKeyValueItem] {
+        [
+            SettingsKeyValueItem(label: "Source", value: snapshot.source.title),
+            SettingsKeyValueItem(label: "Phase", value: snapshot.phase.title),
+            SettingsKeyValueItem(label: "Segments", value: "\(snapshot.segmentCount)"),
+            SettingsKeyValueItem(label: "Hint", value: snapshot.hint ?? "None"),
+            SettingsKeyValueItem(label: "Recognized", value: snapshot.recognizedCharacter?.value ?? "Pending"),
+            SettingsKeyValueItem(label: "Reason", value: snapshot.reason ?? "None"),
+            SettingsKeyValueItem(label: "Span", value: snapshot.spanDescription),
+            SettingsKeyValueItem(
+                label: "Updated",
+                value: snapshot.timestamp.formatted(date: .omitted, time: .standard)
+            ),
+        ]
     }
 }
 
@@ -153,13 +127,10 @@ private struct SettingsRecentRecognitionSessionsView: View {
     let snapshots: [CharacterRecognitionDiagnosticSnapshot]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Recent Sessions")
-                .font(.headline)
-
-            Text(recentSnapshotLines)
-                .font(.caption.monospaced())
-        }
+        SettingsMonospacedReadoutSection(
+            title: "Recent Sessions",
+            text: recentSnapshotLines
+        )
     }
 
     private var recentSnapshotLines: String {

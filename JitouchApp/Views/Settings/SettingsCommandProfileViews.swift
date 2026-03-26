@@ -343,7 +343,7 @@ private struct SettingsOverrideRow: View {
                             .font(.subheadline.weight(.semibold))
 
                         if isSelected {
-                            JitouchStatusBadge(title: "Editing", tint: .blue)
+                            SettingsCardStatusBadge(title: "Editing", tint: .blue)
                         }
                     }
 

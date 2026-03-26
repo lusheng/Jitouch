@@ -103,23 +103,7 @@ struct DiagnosticsSettingsTab<CalibrationContent: View>: View {
 
                 Divider()
 
-                Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 8) {
-                    GridRow {
-                        Text("Observed Events")
-                            .foregroundStyle(.secondary)
-                        Text("\(observedEventCount)")
-                    }
-                    GridRow {
-                        Text("Tap Recoveries")
-                            .foregroundStyle(.secondary)
-                        Text("\(recoveryCount)")
-                    }
-                    GridRow {
-                        Text("Last Event Type")
-                            .foregroundStyle(.secondary)
-                        Text(lastObservedEventType ?? "None")
-                    }
-                }
+                SettingsKeyValueGrid(items: connectedDeviceMetrics)
             }
         }
     }
@@ -132,30 +116,30 @@ struct DiagnosticsSettingsTab<CalibrationContent: View>: View {
             tint: .orange
         ) {
             VStack(alignment: .leading, spacing: 8) {
-                DiagnosticsNoteRow(text: menuBarVisibilityNote)
-                DiagnosticsNoteRow(text: "The old preference pane's `ShowIcon` toggle is still preserved in storage, but it is not applied yet so the standalone app does not disappear.")
-                DiagnosticsNoteRow(text: "Trackpad one-finger/two-finger character recognition and Magic Mouse drag-to-character are now running in Swift. Remaining work is mostly gesture feel tuning, extra overlays, and device-by-device calibration.")
-                DiagnosticsNoteRow(text: "Latest touch frame: \(lastEventDescription)")
-                DiagnosticsNoteRow(text: "Last gesture event: \(lastRecognizedGestureSummary)")
-                DiagnosticsNoteRow(text: "Last executed command: \(lastExecutedCommandSummary)")
+                ForEach(compatibilityNotes, id: \.self) { note in
+                    SettingsBulletNoteRow(text: note)
+                }
             }
         }
     }
-}
 
-private struct DiagnosticsNoteRow: View {
-    let text: String
+    private var connectedDeviceMetrics: [SettingsKeyValueItem] {
+        [
+            SettingsKeyValueItem(label: "Observed Events", value: "\(observedEventCount)"),
+            SettingsKeyValueItem(label: "Tap Recoveries", value: "\(recoveryCount)"),
+            SettingsKeyValueItem(label: "Last Event Type", value: lastObservedEventType ?? "None"),
+        ]
+    }
 
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "circle.fill")
-                .font(.system(size: 6))
-                .foregroundStyle(.secondary)
-                .padding(.top, 6)
-
-            Text(text)
-                .foregroundStyle(.secondary)
-        }
+    private var compatibilityNotes: [String] {
+        [
+            menuBarVisibilityNote,
+            "The old preference pane's `ShowIcon` toggle is still preserved in storage, but it is not applied yet so the standalone app does not disappear.",
+            "Trackpad one-finger/two-finger character recognition and Magic Mouse drag-to-character are now running in Swift. Remaining work is mostly gesture feel tuning, extra overlays, and device-by-device calibration.",
+            "Latest touch frame: \(lastEventDescription)",
+            "Last gesture event: \(lastRecognizedGestureSummary)",
+            "Last executed command: \(lastExecutedCommandSummary)",
+        ]
     }
 }
 
