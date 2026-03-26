@@ -188,31 +188,57 @@ struct SettingsRootView: View {
         switch selectedPane ?? .overview {
         case .overview:
             OverviewSettingsTab(
-                hero: AnyView(overviewHero),
-                metrics: AnyView(overviewMetrics),
-                quickActions: AnyView(quickActionsCard),
-                onboardingGuide: AnyView(onboardingGuideCard),
-                setupChecklist: AnyView(setupChecklist),
-                generalSettings: AnyView(generalSettings),
-                commandCoverage: AnyView(commandCoverage),
-                lastErrorView: appModel.lastError.map { _ in
-                    AnyView(
-                        JitouchSurfaceCard(
-                            title: "Last Error",
-                            subtitle: "The most recent runtime or setup problem reported by the standalone app.",
-                            symbol: "exclamationmark.octagon.fill",
-                            tint: .red
-                        ) {
-                            Text(appModel.lastError ?? "")
-                                .foregroundStyle(.red)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    )
-                }
+                isEnabled: appModel.settings.isEnabled,
+                menuBarSymbolName: appModel.menuBarSymbolName,
+                isRuntimeReady: eventTapManager.isRunning,
+                deviceCount: deviceManager.totalDeviceCount,
+                focusedApplicationName: commandExecutor.activeApplicationDisplayName,
+                hasCompletedOnboarding: appModel.settings.hasCompletedOnboarding,
+                onboardingProgressSummary: appModel.onboardingProgressSummary,
+                onboardingCoreRequirementsMet: appModel.onboardingCoreRequirementsMet,
+                accessibilityGranted: appModel.accessibilityGranted,
+                accessibilityStatusText: appModel.accessibilityStatusText,
+                accessibilityGuidance: appModel.accessibilityGuidance,
+                launchAtLoginStatus: appModel.launchAtLoginStatus,
+                trackpadDeviceCount: deviceManager.trackpadDevices.count,
+                magicMouseDeviceCount: deviceManager.magicMouseDevices.count,
+                lastExecutedCommandSummary: commandExecutor.lastExecutedCommandSummary,
+                lastRecognizedGestureSummary: appModel.lastRecognizedGestureSummary,
+                lastReloadDate: appModel.lastReloadDate,
+                trackpadCommandCount: appModel.trackpadCommandCount,
+                magicMouseCommandCount: appModel.magicMouseCommandCount,
+                recognitionCommandCount: appModel.recognitionCommandCount,
+                trackpadCommands: appModel.settings.trackpadCommands,
+                magicMouseCommands: appModel.settings.magicMouseCommands,
+                recognitionCommands: appModel.settings.recognitionCommands,
+                lastError: appModel.lastError,
+                jitouchEnabled: enabledBinding,
+                trackpadEnabled: trackpadEnabledBinding,
+                magicMouseEnabled: magicMouseEnabledBinding,
+                clickSpeed: clickSpeedBinding,
+                sensitivity: sensitivityBinding,
+                onOpenSetupGuide: appModel.presentOnboarding,
+                onResetSetupStatus: {
+                    appModel.resetOnboarding()
+                    appModel.presentOnboarding()
+                },
+                onOpenAccessibilitySettings: appModel.openAccessibilitySystemSettings,
+                onRefreshPreferences: appModel.refresh,
+                onRestartRuntime: appModel.restartRuntimeServices
             )
         case .permissions:
             PermissionsSettingsTab(
-                permissionsAndStartup: AnyView(permissionsAndStartup)
+                accessibilityGranted: appModel.accessibilityGranted,
+                accessibilityStatusText: appModel.accessibilityStatusText,
+                accessibilityGuidance: appModel.accessibilityGuidance,
+                launchAtLoginStatus: appModel.launchAtLoginStatus,
+                launchAtLoginEnabled: launchAtLoginEnabledBinding,
+                onPromptForAccess: {
+                    appModel.requestAccessibilityPermission()
+                    appModel.refresh()
+                },
+                onOpenAccessibilitySettings: appModel.openAccessibilitySystemSettings,
+                onOpenLoginItemsSettings: appModel.openLoginItemsSystemSettings
             )
         case .trackpad:
             deviceConfigurationPane(for: .trackpad)
@@ -228,11 +254,21 @@ struct SettingsRootView: View {
             )
         case .diagnostics:
             DiagnosticsSettingsTab(
-                diagnosticsSummary: AnyView(diagnosticsSummaryCard),
-                calibration: AnyView(characterRecognitionCalibration),
-                deviceDiagnostics: AnyView(deviceDiagnostics),
-                compatibilityNotes: AnyView(compatibilityNotes)
-            )
+                eventTapStatusText: eventTapManager.statusText,
+                eventTapIsRunning: eventTapManager.isRunning,
+                observedEventCount: eventTapManager.observedEventCount,
+                recoveryCount: eventTapManager.recoveryCount,
+                lastObservedEventType: eventTapManager.lastObservedEventType.map(String.init(describing:)),
+                totalDeviceCount: deviceManager.totalDeviceCount,
+                trackpadDevices: deviceManager.trackpadDevices,
+                magicMouseDevices: deviceManager.magicMouseDevices,
+                lastRecognizedGestureSummary: appModel.lastRecognizedGestureSummary,
+                lastExecutedCommandSummary: commandExecutor.lastExecutedCommandSummary,
+                menuBarVisibilityNote: appModel.menuBarVisibilityNote,
+                lastEventDescription: deviceManager.lastEventDescription
+            ) {
+                characterRecognitionCalibration
+            }
         }
     }
 
@@ -296,343 +332,6 @@ struct SettingsRootView: View {
         )
     }
 
-    private var overviewHero: some View {
-        JitouchSurfaceCard(
-            title: appModel.settings.isEnabled ? "Gesture Engine Ready" : "Jitouch Is Paused",
-            subtitle: "The standalone Swift app now owns device hooks, event taps, editable profiles, and recognition diagnostics. What remains is mostly real-world tuning.",
-            symbol: appModel.menuBarSymbolName,
-            tint: appModel.settings.isEnabled ? .green : .orange,
-            accessory: {
-                JitouchStatusBadge(
-                    title: appModel.settings.isEnabled ? "Active" : "Paused",
-                    tint: appModel.settings.isEnabled ? .green : .orange
-                )
-            }
-        ) {
-            HStack(spacing: 14) {
-                JitouchInlineMetric(
-                    label: "Runtime",
-                    value: eventTapManager.isRunning ? "Ready" : "Needs Attention",
-                    tint: eventTapManager.isRunning ? .green : .orange
-                )
-                JitouchInlineMetric(
-                    label: "Devices",
-                    value: "\(deviceManager.totalDeviceCount)",
-                    tint: .mint
-                )
-                JitouchInlineMetric(
-                    label: "Focused App",
-                    value: commandExecutor.activeApplicationDisplayName,
-                    tint: .blue
-                )
-            }
-        }
-    }
-
-    private var onboardingGuideCard: some View {
-        JitouchSurfaceCard(
-            title: "Setup Guide",
-            subtitle: appModel.settings.hasCompletedOnboarding
-                ? "Reopen the guide any time if you want a quick readiness pass."
-                : "Walk through permissions, startup behavior, and device readiness in one place.",
-            symbol: "figure.walk.motion",
-            tint: appModel.settings.hasCompletedOnboarding ? .blue : .green,
-            accessory: {
-                JitouchStatusBadge(
-                    title: appModel.onboardingProgressSummary,
-                    tint: appModel.onboardingCoreRequirementsMet ? .green : .orange
-                )
-            }
-        ) {
-            HStack(spacing: 12) {
-                Button(appModel.settings.hasCompletedOnboarding ? "Replay Setup Guide" : "Open Setup Guide") {
-                    appModel.presentOnboarding()
-                }
-                .buttonStyle(.borderedProminent)
-
-                if appModel.settings.hasCompletedOnboarding {
-                    Button("Reset Setup Status") {
-                        appModel.resetOnboarding()
-                        appModel.presentOnboarding()
-                    }
-                    .buttonStyle(.bordered)
-                }
-            }
-        }
-    }
-
-    private var overviewMetrics: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 14)], spacing: 14) {
-            overviewMetricCard(
-                title: "Accessibility",
-                value: appModel.accessibilityStatusText,
-                detail: appModel.accessibilityGuidance,
-                symbol: appModel.accessibilityGranted ? "checkmark.shield.fill" : "exclamationmark.shield",
-                tint: appModel.accessibilityGranted ? .green : .orange
-            )
-            overviewMetricCard(
-                title: "Launch at Login",
-                value: appModel.launchAtLoginStatus.title,
-                detail: appModel.launchAtLoginStatus.detail,
-                symbol: "power.circle",
-                tint: .blue
-            )
-            overviewMetricCard(
-                title: "Touch Devices",
-                value: "\(deviceManager.totalDeviceCount)",
-                detail: "Trackpads: \(deviceManager.trackpadDevices.count)  Magic Mouse: \(deviceManager.magicMouseDevices.count)",
-                symbol: "hand.tap",
-                tint: .mint
-            )
-            overviewMetricCard(
-                title: "Last Command",
-                value: commandExecutor.lastExecutedCommandSummary,
-                detail: appModel.lastRecognizedGestureSummary,
-                symbol: "sparkles",
-                tint: .purple
-            )
-        }
-    }
-
-    private func overviewMetricCard(
-        title: String,
-        value: String,
-        detail: String,
-        symbol: String,
-        tint: Color
-    ) -> some View {
-        JitouchMetricTile(
-            title: title,
-            value: value,
-            detail: detail,
-            symbol: symbol,
-            tint: tint
-        )
-    }
-
-    private var setupChecklist: some View {
-        JitouchSurfaceCard(
-            title: "Setup Checklist",
-            subtitle: "The refactor is far enough along to use like a real utility app. These are the remaining readiness checks before serious tuning.",
-            symbol: "checklist",
-            tint: .green
-        ) {
-            VStack(alignment: .leading, spacing: 12) {
-                checklistRow(
-                    title: "Accessibility permission",
-                    detail: appModel.accessibilityGranted
-                        ? "Granted. Event taps and AX window control can run."
-                        : "Still blocked. Jitouch cannot intercept input or move windows until macOS trust is granted.",
-                    isComplete: appModel.accessibilityGranted,
-                    actionTitle: appModel.accessibilityGranted ? nil : "Open Settings",
-                    action: appModel.accessibilityGranted ? nil : {
-                        appModel.openAccessibilitySystemSettings()
-                    }
-                )
-                checklistRow(
-                    title: "Event tap",
-                    detail: eventTapManager.isRunning
-                        ? "Running and ready to observe system input."
-                        : "Stopped or unavailable. Restart runtime services after fixing permissions.",
-                    isComplete: eventTapManager.isRunning,
-                    actionTitle: eventTapManager.isRunning ? nil : "Restart Services",
-                    action: eventTapManager.isRunning ? nil : {
-                        appModel.restartRuntimeServices()
-                    }
-                )
-                checklistRow(
-                    title: "Touch devices",
-                    detail: deviceManager.totalDeviceCount > 0
-                        ? "\(deviceManager.totalDeviceCount) device(s) detected for gesture input."
-                        : "No compatible device is currently visible to the runtime.",
-                    isComplete: deviceManager.totalDeviceCount > 0
-                )
-                checklistRow(
-                    title: "Imported mappings",
-                    detail: (appModel.trackpadCommandCount + appModel.magicMouseCommandCount + appModel.recognitionCommandCount) > 0
-                        ? "Legacy mappings are available to edit and execute."
-                        : "No gesture bindings are loaded yet, so the app has nothing useful to run.",
-                    isComplete: (appModel.trackpadCommandCount + appModel.magicMouseCommandCount + appModel.recognitionCommandCount) > 0
-                )
-            }
-        }
-    }
-
-    private var quickActionsCard: some View {
-        JitouchSurfaceCard(
-            title: "Quick Actions",
-            subtitle: "The most useful recovery and maintenance controls, without digging through multiple pages.",
-            symbol: "bolt.circle",
-            tint: .blue
-        ) {
-            HStack(spacing: 12) {
-                Button("Reload Preferences") {
-                    appModel.refresh()
-                }
-                .buttonStyle(.bordered)
-
-                Button("Restart Runtime") {
-                    appModel.restartRuntimeServices()
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button("Open Accessibility") {
-                    appModel.openAccessibilitySystemSettings()
-                }
-                .buttonStyle(.bordered)
-            }
-
-            if let lastReloadDate = appModel.lastReloadDate {
-                Text("Last refreshed \(lastReloadDate.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var generalSettings: some View {
-        JitouchSurfaceCard(
-            title: "General Controls",
-            subtitle: "Master switches and feel settings that affect the entire runtime.",
-            symbol: "slider.horizontal.3",
-            tint: .indigo
-        ) {
-            VStack(alignment: .leading, spacing: 14) {
-                Toggle("Enable Jitouch", isOn: enabledBinding)
-                Toggle("Enable Trackpad Profiles", isOn: trackpadEnabledBinding)
-                Toggle("Enable Magic Mouse Profiles", isOn: magicMouseEnabledBinding)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Click Speed")
-                        Spacer()
-                        Text(clickSpeedBinding.wrappedValue, format: .number.precision(.fractionLength(2)))
-                            .foregroundStyle(.secondary)
-                    }
-                    Slider(value: clickSpeedBinding, in: 0.05 ... 0.60)
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Sensitivity")
-                        Spacer()
-                        Text(sensitivityBinding.wrappedValue, format: .number.precision(.fractionLength(2)))
-                            .foregroundStyle(.secondary)
-                    }
-                    Slider(value: sensitivityBinding, in: 1.0 ... 8.0)
-                }
-
-                HStack(spacing: 12) {
-                    Button("Reload Preferences from Disk") {
-                        appModel.refresh()
-                    }
-
-                    Button("Restart Runtime Services") {
-                        appModel.restartRuntimeServices()
-                    }
-                }
-            }
-        }
-    }
-
-    private var permissionsAndStartup: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            JitouchSurfaceCard(
-                title: "Accessibility Permission",
-                subtitle: "macOS must trust Jitouch before event taps, shortcuts, and AX window actions can work.",
-                symbol: "lock.shield",
-                tint: appModel.accessibilityGranted ? .green : .orange,
-                accessory: {
-                    JitouchStatusBadge(
-                        title: appModel.accessibilityStatusText,
-                        tint: appModel.accessibilityGranted ? .green : .orange
-                    )
-                }
-            ) {
-                Text(appModel.accessibilityGuidance)
-                    .foregroundStyle(.secondary)
-
-                HStack(spacing: 12) {
-                    Button("Prompt for Access") {
-                        appModel.requestAccessibilityPermission()
-                        appModel.refresh()
-                    }
-                    .buttonStyle(.borderedProminent)
-
-                    Button("Open Accessibility Settings") {
-                        appModel.openAccessibilitySystemSettings()
-                    }
-                    .buttonStyle(.bordered)
-                }
-
-                if !appModel.accessibilityGranted {
-                    Text("After macOS opens Privacy & Security, enable Jitouch in Accessibility and then come back here to restart services.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            JitouchSurfaceCard(
-                title: "Launch at Login",
-                subtitle: "Start the standalone app automatically after login using ServiceManagement.",
-                symbol: "power.circle",
-                tint: .teal,
-                accessory: {
-                    JitouchStatusBadge(
-                        title: appModel.launchAtLoginStatus.title,
-                        tint: appModel.launchAtLoginStatus.isEnabled ? .green : .secondary
-                    )
-                }
-            ) {
-                Toggle("Start Jitouch automatically after login", isOn: launchAtLoginEnabledBinding)
-
-                Text(appModel.launchAtLoginStatus.detail)
-                    .foregroundStyle(.secondary)
-
-                HStack(spacing: 12) {
-                    Button("Open Login Items Settings") {
-                        appModel.openLoginItemsSystemSettings()
-                    }
-                    .buttonStyle(.bordered)
-
-                    if appModel.launchAtLoginStatus.requiresApproval {
-                        Text("Approval is still pending in System Settings.")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                    }
-                }
-
-                Text("Debug builds can still report unavailable or approval-needed states because `SMAppService` behaves best with a properly signed app.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var commandCoverage: some View {
-        JitouchSurfaceCard(
-            title: "Imported Coverage",
-            subtitle: "A quick read on how much of the old preference domain has already been pulled into editable Swift models.",
-            symbol: "square.grid.2x2",
-            tint: .mint
-        ) {
-            VStack(alignment: .leading, spacing: 12) {
-                coverageRow(title: "Trackpad", count: appModel.trackpadCommandCount)
-                coverageRow(title: "Magic Mouse", count: appModel.magicMouseCommandCount)
-                coverageRow(title: "Character Recognition", count: appModel.recognitionCommandCount)
-
-                Divider()
-
-                Text("Imported legacy profiles")
-                    .font(.headline)
-
-                commandSample(for: .trackpad, sets: appModel.settings.trackpadCommands)
-                commandSample(for: .magicMouse, sets: appModel.settings.magicMouseCommands)
-                commandSample(for: .recognition, sets: appModel.settings.recognitionCommands)
-            }
-        }
-    }
-
     private var characterRecognitionSettings: some View {
         JitouchSurfaceCard(
             title: "Character Recognition",
@@ -671,24 +370,6 @@ struct SettingsRootView: View {
         }
     }
 
-    private var compatibilityNotes: some View {
-        JitouchSurfaceCard(
-            title: "Compatibility Notes",
-            subtitle: "A few deliberate differences remain while the old preference pane becomes a real standalone app.",
-            symbol: "info.circle",
-            tint: .orange
-        ) {
-            VStack(alignment: .leading, spacing: 8) {
-                noteRow(appModel.menuBarVisibilityNote)
-                noteRow("The old preference pane's `ShowIcon` toggle is still preserved in storage, but it is not applied yet so the standalone app does not disappear.")
-                noteRow("Trackpad one-finger/two-finger character recognition and Magic Mouse drag-to-character are now running in Swift. Remaining work is mostly gesture feel tuning, extra overlays, and device-by-device calibration.")
-                noteRow("Latest touch frame: \(deviceManager.lastEventDescription)")
-                noteRow("Last gesture event: \(appModel.lastRecognizedGestureSummary)")
-                noteRow("Last executed command: \(commandExecutor.lastExecutedCommandSummary)")
-            }
-        }
-    }
-
     private var characterRecognitionCalibration: some View {
         SettingsCharacterRecognitionCalibrationCard(
             isDiagnosticsEnabled: characterRecognitionDiagnosticsEnabledBinding,
@@ -700,40 +381,6 @@ struct SettingsRootView: View {
             diagnostics: appModel.characterRecognitionDiagnostics,
             onClearDiagnostics: appModel.clearCharacterRecognitionDiagnostics
         )
-    }
-
-    private var deviceDiagnostics: some View {
-        JitouchSurfaceCard(
-            title: "Connected Devices",
-            subtitle: "Live device discovery and event-tap counters from the Swift runtime.",
-            symbol: "cpu",
-            tint: .blue
-        ) {
-            VStack(alignment: .leading, spacing: 10) {
-                deviceSection(title: "Trackpads", devices: deviceManager.trackpadDevices)
-                deviceSection(title: "Magic Mouse", devices: deviceManager.magicMouseDevices)
-
-                Divider()
-
-                Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 8) {
-                    GridRow {
-                        Text("Observed Events")
-                            .foregroundStyle(.secondary)
-                        Text("\(eventTapManager.observedEventCount)")
-                    }
-                    GridRow {
-                        Text("Tap Recoveries")
-                            .foregroundStyle(.secondary)
-                        Text("\(eventTapManager.recoveryCount)")
-                    }
-                    GridRow {
-                        Text("Last Event Type")
-                            .foregroundStyle(.secondary)
-                        Text(eventTapManager.lastObservedEventType.map(String.init(describing:)) ?? "None")
-                    }
-                }
-            }
-        }
     }
 
     private var recognitionSummaryCard: some View {
@@ -766,39 +413,6 @@ struct SettingsRootView: View {
                     detail: appModel.characterRecognitionDiagnostics.liveSnapshot == nil ? "No live snapshot yet." : "Receiving recognizer snapshots.",
                     symbol: "waveform.path.ecg",
                     tint: characterRecognitionDiagnosticsEnabledBinding.wrappedValue ? .pink : .secondary
-                )
-            }
-        }
-    }
-
-    private var diagnosticsSummaryCard: some View {
-        JitouchSurfaceCard(
-            title: "Runtime Diagnostics",
-            subtitle: "A compact read on the observability tools now built into the Swift rewrite.",
-            symbol: "stethoscope",
-            tint: .pink
-        ) {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
-                JitouchMetricTile(
-                    title: "Event Tap",
-                    value: eventTapManager.statusText,
-                    detail: "\(eventTapManager.observedEventCount) observed / \(eventTapManager.recoveryCount) recoveries",
-                    symbol: eventTapManager.isRunning ? "dot.radiowaves.left.and.right" : "slash.circle",
-                    tint: eventTapManager.isRunning ? .green : .orange
-                )
-                JitouchMetricTile(
-                    title: "Detected Devices",
-                    value: "\(deviceManager.totalDeviceCount)",
-                    detail: "Trackpads \(deviceManager.trackpadDevices.count), Magic Mouse \(deviceManager.magicMouseDevices.count)",
-                    symbol: "cpu",
-                    tint: .blue
-                )
-                JitouchMetricTile(
-                    title: "Recent Gesture",
-                    value: appModel.lastRecognizedGestureSummary,
-                    detail: commandExecutor.lastExecutedCommandSummary,
-                    symbol: "hand.tap",
-                    tint: .indigo
                 )
             }
         }
@@ -838,79 +452,6 @@ struct SettingsRootView: View {
                     symbol: "dot.radiowaves.left.and.right",
                     tint: deviceCount == 0 ? .orange : .green
                 )
-            }
-        }
-    }
-
-    private func checklistRow(
-        title: String,
-        detail: String,
-        isComplete: Bool,
-        actionTitle: String? = nil,
-        action: (() -> Void)? = nil
-    ) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: isComplete ? "checkmark.circle.fill" : "circle.dashed")
-                .foregroundStyle(isComplete ? .green : .orange)
-                .font(.system(size: 15, weight: .semibold))
-                .padding(.top, 2)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-
-                Text(detail)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer(minLength: 12)
-
-            if let actionTitle, let action {
-                Button(actionTitle, action: action)
-                    .buttonStyle(.bordered)
-            }
-        }
-    }
-
-    private func noteRow(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "circle.fill")
-                .font(.system(size: 6))
-                .foregroundStyle(.secondary)
-                .padding(.top, 6)
-
-            Text(text)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private func coverageRow(title: String, count: Int) -> some View {
-        HStack {
-            Text(title)
-            Spacer()
-            Text("\(count)")
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private func deviceSection(title: String, devices: [ConnectedDevice]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-
-            if devices.isEmpty {
-                Text("No devices detected.")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(devices) { device in
-                    HStack {
-                        Text(device.displayName)
-                        Spacer()
-                        Text("family \(device.familyID)")
-                            .foregroundStyle(.secondary)
-                    }
-                }
             }
         }
     }
@@ -1070,25 +611,6 @@ struct SettingsRootView: View {
             command: gestureCommandBinding(for: device, setID: setID, gesture: gesture),
             onRevealFilePath: revealFilePath
         )
-    }
-
-    private func commandSample(
-        for device: CommandDevice,
-        sets: [ApplicationCommandSet]
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(device.title)
-                .font(.subheadline.weight(.semibold))
-
-            if let firstSet = sets.first {
-                let preview = firstSet.gestures.prefix(3).map { "\($0.gesture) -> \($0.command)" }.joined(separator: " • ")
-                Text(preview.isEmpty ? "No commands imported." : preview)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("No commands imported.")
-                    .foregroundStyle(.secondary)
-            }
-        }
     }
 
     private func gestureSearchCard(for device: CommandDevice) -> some View {
