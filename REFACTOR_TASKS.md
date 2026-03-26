@@ -1,1577 +1,1080 @@
-# Jitouch 现代化重构 Task List
+# Jitouch 开发任务清单
 
-## 重构目标
-- 纯 Swift 实现（仅保留一个 C 头文件声明 MultitouchSupport 私有 API 类型）
-- prefPane → 独立 SwiftUI MenuBar App
-- 支持 macOS 15+ 至 macOS 26 (Tahoe)
-- Retina 高清分辨率（SF Symbols + 矢量资源）
-- 开源免费 (GPL v3)
+> 更新于 2026-03-25 — 基于仓库全面评估后制定的后续演进路线
 
-## 当前仓库审计（2026-03-24）
-- 旧实现的功能核心几乎全部集中在 `jitouch/Jitouch/Gesture.m`，单文件 4304 行，混合了设备发现、私有 API、事件拦截、手势状态机、命令分发和字符识别。
-- `jitouch/Jitouch/Settings.m` 仍然是旧版配置结构的“真相来源”，包括默认手势、plist key 和兼容行为；迁移时应优先复用其数据语义，而不是重新发明格式。
-- `jitouch/Jitouch/JitouchAppDelegate.m` 主要承担菜单栏、可访问性提示和设置同步职责，适合迁移为新的 `AppModel` + `MenuBarExtra`。
-- `jitouch/Jitouch/SystemEvents.h` 与 `jitouch/Jitouch/SystemPreferences.h` 是旧式 ScriptingBridge 头，长期目标应尽量从新架构中移除，仅在确实需要 Apple Events 自动化时以更小边界重引入。
-- 新版工程建议以 `project.yml` 作为工程真源，通过 `xcodegen generate` 生成 `Jitouch.xcodeproj`，避免手写 `pbxproj`。
-- 新版独立 App 应继续兼容旧偏好域 `com.jitouch.Jitouch`，优先实现“读取旧配置直接可用”，再逐步做设置迁移和格式升级。
+## 项目现状
 
-## 推荐实施顺序
-1. 先把独立 App 壳、偏好读取兼容层和私有 API 头文件边界搭起来，让仓库重新具备可持续演进的工程基础。
-2. 然后拆 `Gesture.m`：先分离设备管理、事件拦截、命令执行，再迁移手势识别器本体，避免直接做 4300 行的逐行翻译。
-3. 最后再处理高清资源、设置 UI、开源打包和 Tahoe 兼容性收尾，这些适合建立在新架构已经稳定之后。
+### 已完成（Phase 1 迁移）
 
-## 旧文件到新模块映射
-| 旧文件 | 新模块 |
-| --- | --- |
-| `jitouch/Jitouch/JitouchAppDelegate.m` | `JitouchApp/App/` + `JitouchApp/Views/` + `JitouchApp/Services/JitouchAppModel.swift` |
-| `jitouch/Jitouch/Settings.m` | `JitouchApp/Models/AppSettings.swift` + `JitouchApp/Models/CommandModels.swift` + `JitouchApp/Services/LegacySettingsStore.swift` |
-| `jitouch/Jitouch/Gesture.m` | `JitouchApp/Services/DeviceManager.swift` + `EventTapManager.swift` + `GestureEngine.swift` + `Services/Recognizers/*` |
-| `jitouch/Jitouch/KeyUtility.m` | `CommandExecutor.swift` / `KeyboardSimulationService.swift` |
-| `jitouch/Jitouch/CursorWindow.m` / `GestureWindow.m` | `OverlayWindowController.swift` 或后续 SwiftUI/AppKit overlay bridge |
-| `jitouch/Jitouch/SystemEvents.h` / `SystemPreferences.h` | 最小化 Apple Events 边界，默认不直接迁入 |
+| 模块 | 状态 | 说明 |
+|------|------|------|
+| 纯 Swift 项目结构 | ✅ | XcodeGen + project.yml，Swift 6 strict concurrency |
+| MultitouchSupport 私有 API 边界 | ✅ | 仅 1 个 C header，Bridging Header 导入 |
+| 触摸数据模型 | ✅ | TouchFrame / TouchPoint / GestureEvent 全值类型 Sendable |
+| 设备管理 | ✅ | DeviceManager — IOKit 热插拔 + MTDevice 回调 |
+| 事件拦截 | ✅ | EventTapManager — CGEventTap + tapDisabledByTimeout 恢复 |
+| 手势识别引擎 | ✅ | 12 个识别器，GestureRecognizerProtocol 协议 |
+| 命令执行器 | ✅ | CommandExecutor — 键盘模拟、窗口操作、系统命令 |
+| 设置系统 | ✅ | LegacySettingsStore 兼容旧 plist + 自动持久化 |
+| SwiftUI UI | ✅ | MenuBarExtra + Settings 窗口 + Onboarding 向导 |
+| 视觉反馈 | ✅ | Move/Resize overlay + 字符识别轨迹 overlay |
+| 菜单栏状态 | ✅ | 设备状态、权限状态、当前 App 路由 |
 
-## 架构概览
+### 当前代码统计
+
+```
+Swift:  11,184 行 / 40 文件
+ObjC:    7,492 行 / 21 文件（仅参考，不编译）
+测试:    0 行
+CI/CD:  无
+```
+
+### 已知的架构问题
+
+1. **SettingsRootView.swift 2,219 行** — 单文件过大，5 个 Tab + 手势编辑器 + 应用覆盖全挤在一起
+2. **JitouchAppModel.swift 682 行** — God Object，混合了生命周期、设置、运行时协调
+3. **CommandExecutor.swift 1,002 行** — 键盘/窗口/系统命令/Open URL/Open File 全在一个 switch 里
+4. **测试覆盖 0%** — 手势识别器是纯状态机，天然可测但未测
+5. **无 CI/CD** — 每次提交无自动验证，Release 手动构建
+6. **EventTap 无主动恢复** — 权限撤销或系统异常后不会自动重建
+7. **设置格式绑定旧 plist** — 无 schema 版本化，无导入导出
+8. **功能 parity 状态仍不完全清晰** — `Gesture.m` 的主体能力已拆出，但仍需逐项核对已迁移 / 待迁移 / 明确废弃
+9. **Assets.xcassets 基本为空** — 仍依赖旧 `icns/png` 资源，高 DPI 和模板图标尚未彻底现代化
+10. **多显示器窗口管理仍有风险** — 最大化、左右分屏、Move/Resize 主要基于 `NSScreen.main`
+11. **回调桥使用 `nonisolated(unsafe)` 全局状态** — 当前可用，但长期需要收敛为更可审计的桥接层
+12. **`ShowIcon` 等兼容项仍是“保留但未生效”状态** — 需要明确是继续支持还是正式废弃
+
+---
+
+## 近期迭代任务清单（新增）
+
+> 这一组任务比后面的长期 Phase 更贴近当前代码现状，建议作为接下来 4-8 周的主线 backlog。
+
+### Iteration A — 事实校准与防回归（P0）
+
+#### Task A1 — 建立功能 parity 真值表
+
+**目标**: 把“看起来已迁移”变成“可核对的已迁移”。
+
+1. 从旧 `jitouch/Jitouch/Gesture.m` 提取：
+   - 全部 `dispatchCommand(@"...")` 手势名
+   - 全部 `command isEqualToString:@"..."` 动作名
+2. 在仓库中创建一份 parity 清单，例如：
+   - `docs/parity-matrix.md`
+   - 或在本文件新增 `Parity Matrix` 章节
+3. 每项标记为：
+   - `已迁移并验证`
+   - `已迁移待真机验证`
+   - `未迁移`
+   - `决定废弃`
+4. 第一批必须明确结论的项目：
+   - Trackpad `Two-Fix One-Slide-*`
+   - `One-Fix Three-Slide`
+   - `Quick Tab Switching`
+   - `Select Tab Above Cursor`
+   - `Dashboard` / `Spaces`
+
+**验收标准**:
+- 后续讨论 parity 时不再依赖口头判断
+- 能明确回答“还有哪些旧功能不能删旧代码”
+
+#### Task A2 — 测试基础设施 + 可回放输入夹具
+
+**目标**: 先把识别器变成可验证系统，再谈调参。
+
+1. 在 `project.yml` 中加入 `JitouchTests` target
+2. 创建 `JitouchTests/TestHelpers/TouchFrameFactory.swift`
+3. 创建 `JitouchTests/Fixtures/` 或内置 builder，用于回放：
+   - 三指 / 四指 swipe
+   - 三指 tap / 四指 tap
+   - 固定指 tap / slide
+   - Move / Resize 起手
+   - 字符识别轨迹（`L`, `B`, `Up`, `Left` 等）
+4. 第一批测试建议：
+   - `CharacterRecognitionEngineTests`
+   - `TrackpadSwipeRecognizerTests`
+   - `TrackpadTapRecognizerTests`
+   - `TrackpadFixFingerRecognizerTests`
+   - `MagicMouseRecognizerTests`
+   - `LegacySettingsStoreTests`
+
+**验收标准**:
+- `xcodebuild test` 可运行
+- 至少覆盖最核心的 5 类识别器和设置兼容逻辑
+
+#### Task A3 — 修正当前文档中的“过早完成”描述
+
+**目标**: 避免后续 roadmap 建立在错误状态判断上。
+
+1. 将 `Gesture.m → ✅ 已迁移` 调整为更准确的状态：
+   - `🟡 主体已迁移，仍有 parity 收尾`
+2. 将命令系统描述从“全量完成”改成：
+   - “主体已迁移，剩余遗留动作需逐项裁剪或补齐”
+3. 在 README 或本文件里明确：
+   - 当前主要缺口是 parity、真机验证、测试、资源现代化
+
+**验收标准**:
+- 文档状态与代码现实一致
+
+---
+
+### Iteration B — 先拆大文件，再补稳定性（P0-P1）
+
+#### Task B1 — 拆分 `SettingsRootView.swift`
+
+**目标**: 降低 UI 修改成本，避免一个文件承载全部设置逻辑。
+
+建议拆分为：
+```
+Views/
+├── SettingsRootView.swift
+├── Settings/
+│   ├── OverviewTab.swift
+│   ├── PermissionsTab.swift
+│   ├── TrackpadSettingsTab.swift
+│   ├── MagicMouseSettingsTab.swift
+│   ├── CharacterRecognitionTab.swift
+│   ├── GeneralSettingsTab.swift
+│   ├── DiagnosticsTab.swift
+│   └── Components/
+```
+
+**验收标准**:
+- `SettingsRootView.swift` 控制在约 200-300 行
+- 功能不变，仅做结构拆分
+
+#### Task B2 — 拆分 `CommandExecutor.swift`
+
+**目标**: 将命令路由与具体执行能力拆开。
+
+建议结构：
+```
+Services/
+├── CommandExecutor.swift
+├── Executors/
+│   ├── KeyboardCommandExecutor.swift
+│   ├── WindowCommandExecutor.swift
+│   ├── MouseCommandExecutor.swift
+│   ├── SystemCommandExecutor.swift
+│   └── ResourceCommandExecutor.swift
+```
+
+其中：
+- `CommandExecutor` 只做路由与 resolution
+- `WindowCommandExecutor` 负责 AX 窗口操作
+- `SystemCommandExecutor` 负责 Mission Control / Launchpad / Dock 通知
+- `ResourceCommandExecutor` 负责 Open URL / Open File
+
+**验收标准**:
+- 主文件显著瘦身
+- 命令逻辑更容易测
+
+#### Task B3 — 拆分 `JitouchAppModel.swift`
+
+**目标**: 让 `AppModel` 从 God Object 退化为组合层。
+
+建议拆为：
+- `AppLifecycleCoordinator`
+- `RuntimeCoordinator`
+- `SettingsCoordinator`
+- `OnboardingCoordinator`
+
+**验收标准**:
+- `JitouchAppModel.swift` 只保留对外 observable 状态与少量 facade
+
+#### Task B4 — EventTap 健康检查与自动恢复
+
+**目标**: 把“当前能跑”提升到“长期挂着也稳”。
+
+1. 加入定时健康检查
+2. tap disabled 后自动 re-enable / recreate
+3. AX 权限撤销时自动降级，权限恢复时自动重启
+4. 所有恢复事件写入 `os.Logger`
+
+**验收标准**:
+- 菜单栏能看出 runtime 异常
+- 无需手动重启即可从常见 tap 失效场景恢复
+
+#### Task B5 — 设备管理与窗口管理容错
+
+**目标**: 降低真机环境下最容易出问题的两个点。
+
+1. `DeviceManager`：
+   - 收紧未知 `familyID` 的兜底分类策略
+   - 补设备枚举失败重试与日志
+2. `CommandExecutor`：
+   - 基于窗口所在屏幕而不是 `NSScreen.main` 计算目标 frame
+   - 处理多显示器、Dock 位置和不同 visibleFrame
+
+**验收标准**:
+- 真机插拔 / 唤醒 / 多显示器场景下行为更稳定
+
+---
+
+### Iteration C — 补产品面缺口（P1）
+
+#### Task C1 — 资源现代化与高 DPI 收尾
+
+**目标**: 完成从旧 png/icns 到现代资源管线的切换。
+
+1. 真正建立 `Assets.xcassets`
+2. 导入 / 重制：
+   - AppIcon
+   - 菜单栏模板图标
+   - 诊断 / overlay 所需资源
+3. 评估是否统一改为：
+   - SF Symbols
+   - PDF vector asset
+   - 必要时保留少量位图资源
+4. 清理旧资源引用路径
+
+**验收标准**:
+- 新 App 不再依赖 legacy 资源布局
+- Retina / 深浅色 / 模板图标表现正常
+
+#### Task C2 — 设置系统 v1 schema 化
+
+**目标**: 从“长期绑死旧 plist”升级到“兼容旧格式但以新格式为主”。
+
+1. 定义新的 Codable schema
+2. 旧 `com.jitouch.Jitouch` 作为 importer
+3. 新格式放到 `Application Support`
+4. 增加 `settingsSchemaVersion`
+5. 补导入 / 导出能力
+
+**验收标准**:
+- 新旧设置边界清晰
+- 后续新增配置不再继续污染 legacy plist
+
+#### Task C3 — 菜单栏与兼容项清理
+
+**目标**: 明确哪些兼容项继续支持，哪些正式废弃。
+
+需要逐项决策：
+- `ShowIcon`
+- 旧命令别名（如 `Chrome` / `Word`）
+- 旧 PrefPane 残留语义
+- 旧动作名的兼容读写
+
+**验收标准**:
+- 每个兼容项都有明确策略：支持 / 迁移 / 废弃
+
+#### Task C4 — 真机验证矩阵
+
+**目标**: 建立 Tahoe 时代真正有价值的验证清单。
+
+建议按矩阵记录：
+- macOS 15 / macOS 26
+- 内建 Trackpad / Magic Trackpad / Magic Mouse
+- 单显示器 / 多显示器
+- Intel（如仍支持）/ Apple Silicon
+
+每个矩阵项至少验证：
+- 设备发现
+- EventTap 启动
+- 常用 gesture
+- Move / Resize
+- 字符识别
+- 登录启动
+
+**验收标准**:
+- 不是“编译通过即兼容”，而是有真实设备结论
+
+---
+
+### Iteration D — 发布与开源收尾（P1-P2）
+
+#### Task D1 — CI / Release 自动化
+
+1. PR CI：`xcodegen generate` + `xcodebuild build` + `xcodebuild test`
+2. Tag Release：签名、公证、打包、上传 artifact
+3. 可选：SwiftLint / SwiftFormat
+
+#### Task D2 — 开源维护材料
+
+1. `CONTRIBUTING.md`
+2. Issue / PR Template
+3. `CHANGELOG.md`
+4. 架构导读文档
+5. 真机验证结果文档
+
+#### Task D3 — Legacy 目录退场条件
+
+**只有满足以下条件才建议删除 `jitouch/`**：
+- parity 真值表完成
+- 剩余未迁移项全部关闭
+- 至少一轮真机回归完成
+- 测试与 CI 基线建立
+
+---
+
+## Phase 2: 工程质量基础
+
+> 优先级最高。没有测试和 CI 的代码只是看起来能跑。
+
+### Task 2.1 — 测试基础设施搭建
+
+**目标**: 在 project.yml 中添加测试 target，建立第一批单元测试。
+
+1. 在 `project.yml` 中添加 `JitouchTests` target：
+   - type: `unitTestBundle`
+   - platform: macOS
+   - dependencies: `[Jitouch]`
+   - sources: `JitouchTests/`
+
+2. 创建目录 `JitouchTests/`
+
+3. 优先编写以下测试（按 ROI 排序）：
+
+   **手势识别器测试**（最高 ROI — 纯状态机，输入 TouchFrame 输出 GestureEvent）：
+   - `CharacterRecognitionEngineTests` — 路径匹配和评分算法，输入轨迹点序列，断言识别结果
+   - `TrackpadSwipeRecognizerTests` — 构造三指/四指滑动的 TouchFrame 序列，验证方向判定
+   - `TrackpadTapRecognizerTests` — 点击时间窗口、手指数判定
+   - `TrackpadFixFingerRecognizerTests` — 固定指识别、操作指方向
+   - `MagicMouseRecognizerTests` — Magic Mouse 手势识别
+
+   **设置系统测试**：
+   - `LegacySettingsStoreTests` — plist 读取、格式兼容、默认值回退
+   - `CommandCatalogTests` — 手势→命令解析、per-app 覆盖优先级
+
+   **辅助工具**：
+   - 创建 `TestHelpers/TouchFrameFactory.swift` — 工厂方法生成测试用 TouchFrame 序列
+   - 模拟三指轻拍：3 个 makeTouch → touching (短暂) → breakTouch
+   - 模拟三指左滑：3 个 makeTouch → touching (x 递减) → breakTouch
+   - 模拟字符 "L"：轨迹点序列 ↓→
+
+4. 验证：`xcodebuild test` 通过
+
+**注意**: 手势识别器当前直接依赖具体服务，可能需要先提取协议（见 Task 2.3）才能完全 mock。第一批测试可以直接构造 TouchFrame 调用 `processFrame()` 来测试。
+
+---
+
+### Task 2.2 — CI/CD 流水线
+
+**目标**: PR 合入前自动编译 + 测试；Release 自动构建 + 签名 + 公证。
+
+1. **GitHub Actions — PR 检查** (`.github/workflows/ci.yml`)：
+   ```
+   触发: pull_request + push to main
+   环境: macos-15 runner
+   步骤:
+   - brew install xcodegen
+   - xcodegen generate
+   - xcodebuild build -scheme Jitouch -configuration Debug CODE_SIGNING_ALLOWED=NO
+   - xcodebuild test -scheme Jitouch (当测试 target 就绪后启用)
+   ```
+
+2. **GitHub Actions — Release** (`.github/workflows/release.yml`)：
+   ```
+   触发: tag push (v*)
+   步骤:
+   - 构建 Release configuration
+   - 代码签名 (Developer ID Application)
+   - notarytool 提交公证
+   - 打包 .dmg
+   - 创建 GitHub Release + 上传 artifact
+   ```
+   签名证书和 Apple ID 凭据通过 GitHub Secrets 注入。
+
+3. **可选：SwiftLint**
+   - 添加 `.swiftlint.yml` 基础规则
+   - CI 中运行 `swiftlint lint --strict`
+
+4. 验证：PR 提交后 CI 自动运行，状态检查通过
+
+---
+
+### Task 2.3 — 服务层可测试性重构
+
+**目标**: 为核心服务提取协议接口，支持测试注入。
+
+1. 提取协议：
+   ```swift
+   protocol DeviceManaging: AnyObject, Sendable {
+       var trackpadDevices: [MTDeviceRef] { get }
+       var magicMouseDevices: [MTDeviceRef] { get }
+       func start(trackpadHandler: MTContactCallbackFunction,
+                  mouseHandler: MTContactCallbackFunction)
+       func stop()
+   }
+
+   protocol EventTapManaging: AnyObject, Sendable {
+       var isRunning: Bool { get }
+       func start() throws
+       func stop()
+   }
+
+   protocol CommandExecuting: AnyObject, Sendable {
+       func execute(_ event: GestureEvent, settings: JitouchSettings,
+                    commands: ApplicationCommandSet) async
+   }
+   ```
+
+2. 让现有实现遵循协议（无需改变外部行为）
+
+3. `JitouchAppModel` 通过协议引用服务（而非具体类型）
+
+4. 创建 Mock 实现用于测试：
+   - `MockDeviceManager` — 可控制的设备列表
+   - `MockEventTapManager` — 记录 start/stop 调用
+   - `MockCommandExecutor` — 记录收到的 GestureEvent
+
+5. 验证：现有功能不受影响，测试可以注入 mock
+
+---
+
+## Phase 3: 架构优化
+
+> 拆分过大的文件，清理 God Object。
+
+### Task 3.1 — 拆分 SettingsRootView (2,219 行)
+
+**目标**: 按 Tab 拆分为独立 View 文件，每个 300-500 行。
+
+拆分方案：
+```
+Views/
+├── SettingsRootView.swift          ← 瘦身为 Tab 容器 (~100 行)
+├── Settings/
+│   ├── TrackpadSettingsTab.swift    ← Trackpad 手势配置
+│   ├── MagicMouseSettingsTab.swift  ← Magic Mouse 手势配置
+│   ├── CharacterRecognitionTab.swift ← 字符识别配置
+│   ├── GeneralSettingsTab.swift     ← 通用设置 + 权限 + 调试
+│   ├── AppOverridesTab.swift        ← 应用专属覆盖
+│   └── Components/
+│       ├── GestureEditorView.swift  ← 手势编辑器（复用）
+│       ├── CommandPickerView.swift  ← 命令选择下拉
+│       └── OverrideDiffBadge.swift  ← 覆盖差异标记
+```
+
+原则：
+- SettingsRootView 只做 Tab 切换和窗口级布局
+- 每个 Tab 是独立的 struct View，接收 `@Bindable` 的 model
+- 可复用组件提取到 Components/
+- 不改变任何功能行为
+
+---
+
+### Task 3.2 — 拆分 JitouchAppModel (682 行)
+
+**目标**: 拆分为 3 个职责清晰的协调器。
+
+```
+JitouchAppModel.swift  ← 退化为薄组合层 (~150 行)
+  ├── AppLifecycleCoordinator.swift  ← 启动/停止序列、系统事件监听、唤醒恢复
+  ├── SettingsCoordinator.swift      ← 设置读写、迁移、验证、persist()
+  └── RuntimeCoordinator.swift       ← 运行时服务编排、设备→引擎→执行器的连接
+```
+
+JitouchAppModel 保留为 @Observable 的对外接口，内部委托给三个 coordinator。
+
+---
+
+### Task 3.3 — 拆分 CommandExecutor (1,002 行)
+
+**目标**: 按命令类别拆分执行逻辑。
+
+```
+Services/
+├── CommandExecutor.swift         ← 路由层 (~100 行)，按 CommandType.category 分发
+├── Executors/
+│   ├── KeyboardCommandExecutor.swift   ← 键盘快捷键模拟
+│   ├── WindowCommandExecutor.swift     ← AXUIElement 窗口操作
+│   ├── SystemCommandExecutor.swift     ← Mission Control / Launchpad / Spaces
+│   ├── MouseCommandExecutor.swift      ← 中键点击、自动滚动
+│   └── ScriptCommandExecutor.swift     ← AppleScript / Open URL / Open File
+```
+
+---
+
+## Phase 4: 稳定性与容错
+
+> 让 App 在真实环境中可靠运行。
+
+### Task 4.1 — EventTap 健康监控和自动恢复
+
+**目标**: EventTap 被系统 disable 后自动恢复，权限撤销后优雅降级。
+
+1. **心跳检测**：
+   - 定时器（每 5 秒）检查 `CGEvent.tapIsEnabled(tap:)` 状态
+   - 如果 disabled，尝试 `CGEvent.tapEnable(tap:, enable: true)`
+   - 如果 re-enable 失败 3 次，销毁并重建整个 EventTap
+
+2. **权限变更响应**：
+   - 定时检查 `AXIsProcessTrusted()`
+   - 权限被撤销 → 停止所有运行时服务 → 菜单栏显示警告 → 引导重新授权
+   - 权限重新授予 → 自动重启服务
+
+3. **菜单栏健康指示**：
+   - 正常：标准图标
+   - EventTap 异常：图标带黄色警告点
+   - 权限缺失：图标变灰 + 提示文字
+
+4. 使用 `os.Logger` 记录所有恢复事件，便于排查
+
+---
+
+### Task 4.2 — 设备管理容错增强
+
+**目标**: 设备断连/重连、系统唤醒后稳定恢复。
+
+1. **IOKit 热插拔回调容错**：
+   - 回调中 catch 所有异常，避免崩溃
+   - 设备移除时确保释放 MTDevice 资源（stop + unregister callback）
+
+2. **系统唤醒恢复**：
+   - 监听 `NSWorkspace.didWakeNotification`
+   - 唤醒后延迟 2 秒，然后 stop → start 全部设备
+   - 加入重试逻辑（最多 3 次，间隔 1 秒）
+
+3. **设备枚举失败处理**：
+   - `MTDeviceCreateList()` 返回空或 nil → 延迟重试
+   - familyID 查询失败 → 跳过该设备并记录日志
+
+---
+
+### Task 4.3 — 性能优化
+
+**目标**: 确保触摸帧处理 < 1ms 延迟，无多余内存分配。
+
+1. **触摸回调热路径分析**：
+   - 使用 Instruments / os_signpost 标记 `handleTouchFrame` 耗时
+   - 目标：每帧处理时间 P99 < 1ms
+
+2. **减少堆分配**：
+   - TouchPoint 已是 struct，确认 TouchFrame 的 `[TouchPoint]` 不产生不必要的 copy
+   - 考虑固定大小数组（最多 11 个手指）替代动态 Array
+   - 识别器内部状态变量使用值类型
+
+3. **避免主线程阻塞**：
+   - 触摸回调在 MultitouchSupport 的回调线程执行，识别器在同一线程完成
+   - 仅在最终执行命令时 dispatch 到主线程
+   - 确认 @MainActor 标注不会导致回调中隐式 dispatch
+
+---
+
+## Phase 5: 设置系统演进
+
+> 从旧 plist 兼容层过渡到现代化设置系统。
+
+### Task 5.1 — 设置 Schema 版本化
+
+**目标**: 引入版本化的 Codable 设置格式，支持向前兼容。
+
+1. 定义 `SettingsSchema_v1`（对应当前 LegacySettingsStore 的语义）
+
+2. 迁移逻辑：
+   ```
+   App 启动
+     → 检查 plist 中是否有 "settingsSchemaVersion" key
+     → 无版本标记 → 按旧格式读取 → 自动迁移为 v1 并写入版本标记
+     → 版本 < 当前 → 运行对应迁移函数链
+     → 版本 = 当前 → 直接加载
+   ```
+
+3. 后续每次 schema 变更，新增迁移函数 `migrateV1toV2()` 等
+
+4. 保留 LegacySettingsStore 作为 v0 → v1 的一次性迁移器
+
+---
+
+### Task 5.2 — 设置导入/导出
+
+**目标**: 用户可以导出完整设置为 JSON 文件，在另一台 Mac 上导入。
+
+1. 导出：将当前设置序列化为带版本号的 JSON → NSSavePanel 保存
+2. 导入：NSOpenPanel 选择 JSON → 验证版本号 → 反序列化 → 确认覆盖 → 应用
+3. UI：设置窗口 General Tab 底部添加"导入设置"/"导出设置"按钮
+4. 格式包含：全局设置 + 所有手势绑定 + 应用覆盖 + 字符识别配置
+
+---
+
+## Phase 6: 功能增强
+
+> 差异化功能，提升竞争力。
+
+### Task 6.1 — 国际化 (i18n)
+
+**目标**: 支持中英文 UI。
+
+1. 创建 `Localizable.xcstrings`（Xcode 15+ String Catalog）
+2. 将所有硬编码 UI 字符串替换为 `String(localized:)` 调用
+3. 首批语言：英语 (en) + 简体中文 (zh-Hans)
+4. 命令名称、手势名称、Onboarding 文案、菜单栏文案
+5. 设置窗口标题、Tab 名称、Section 标题
+
+---
+
+### Task 6.2 — 手势冲突检测
+
+**目标**: 当用户配置的手势条件重叠时，在 Settings UI 中给出可视化提示。
+
+1. 定义冲突规则：
+   - 相同 finger count + 相同 device type 的手势互斥性检查
+   - 例如：三指轻拍 vs 三指滑动（轻拍是短时间接触，滑动有位移要求）— 这不算冲突
+   - 例如：一固一滑左 vs 三指左滑 — 潜在冲突（取决于手指排布）
+
+2. Settings UI 中在冲突手势旁边显示警告图标 + tooltip 说明
+
+3. 不阻止用户保存，仅作为提示
+
+---
+
+### Task 6.3 — 窗口管理增强
+
+**目标**: 扩展 Move/Resize 支持屏幕边缘吸附和分屏。
+
+1. **边缘吸附**：
+   - 拖拽窗口到屏幕边缘 → 自动 snap 到半屏/四分屏
+   - 吸附区域：屏幕左/右边缘（50%宽度）、四个角（25%面积）
+   - 接近边缘时显示半透明预览区域
+
+2. **多显示器支持**：
+   - 窗口拖过屏幕边界 → 自动切换到相邻显示器
+   - `moveToNextScreen` 命令遍历 `NSScreen.screens`
+
+3. 需要的底层能力：
+   - AXUIElement 设置窗口 position + size
+   - 当前 `TrackpadMoveResizeRecognizer` 已支持 dx/dy，在 `CommandExecutor` 中添加吸附判定逻辑
+
+---
+
+### Task 6.4 — 交互式手势教程
+
+**目标**: Onboarding 中添加"试一试"步骤。
+
+1. 在 OnboardingFlowView 中新增 "Try It" 步骤
+2. 显示一个手势名称（如"三指左滑"）+ 动画示意
+3. 用户在触控板上执行该手势 → App 实时识别并给出 ✅ 反馈
+4. 完成 3-5 个基础手势后标记 onboarding 完成
+5. 需要临时模式：识别到手势后不执行命令，仅反馈给 Onboarding UI
+
+---
+
+### Task 6.5 — 自定义手势录制（远期）
+
+**目标**: 用户可以录制自定义触摸轨迹并绑定为手势。
+
+1. 手势录制 UI：
+   - 点击"录制"按钮 → 进入录制模式
+   - 实时显示触摸轨迹
+   - 录制完成 → 保存为 `GestureTemplate`（轨迹点序列 + 手指数 + 时间特征）
+
+2. 匹配引擎：
+   - 新增 `CustomGestureRecognizer`，对录制的模板做 DTW (Dynamic Time Warping) 匹配
+   - 匹配阈值可调
+
+3. 管理 UI：
+   - 自定义手势列表、命名、绑定命令、删除
+   - 存储在设置 JSON 中
+
+4. 这是大型功能，建议在其他 Phase 稳定后再启动
+
+---
+
+## Phase 7: 开源发布
+
+> 让项目进入可持续的开源状态。
+
+### Task 7.1 — 代码签名与分发
+
+1. **Developer ID 证书配置**：
+   - 在 project.yml Release 配置中设置 DEVELOPMENT_TEAM
+   - Hardened Runtime 签名
+
+2. **公证 (Notarization)**：
+   - CI 中集成 `notarytool submit` + `stapler staple`
+   - 未公证的 app 在 macOS 上会被 Gatekeeper 拦截
+
+3. **分发格式**：
+   - .dmg（拖拽安装）
+   - 可选：Homebrew Cask formula
+
+4. **自动更新**（可选）：
+   - 集成 Sparkle 2.x (SPM)
+   - appcast.xml 托管在 GitHub Pages 或 Releases
+
+---
+
+### Task 7.2 — 开源准备
+
+1. 添加 `LICENSE` 文件 (GPL v3)
+2. 创建 `CONTRIBUTING.md`：
+   - 开发环境搭建（Xcode 16+, xcodegen, macOS 15+）
+   - 编码规范（Swift 6, strict concurrency）
+   - PR 流程
+   - 架构概述和关键模块导读
+3. 创建 `.github/ISSUE_TEMPLATE/` — bug report + feature request
+4. 创建 `.github/PULL_REQUEST_TEMPLATE.md`
+5. 更新 `README.md`（安装说明、功能列表、截图、致谢）
+6. 创建 `CHANGELOG.md`
+7. 评估是否删除 `jitouch/` 旧代码目录（或在 README 中标记为 legacy reference）
+
+---
+
+### Task 7.3 — macOS 版本兼容性验证
+
+1. **macOS 15 (Sequoia)** — 当前主要开发环境，持续验证
+2. **macOS 16 (Tahoe)** — 需重点关注：
+   - MultitouchSupport 私有 API 是否有签名变化
+   - CGEventTap 行为是否变化
+   - IOKit 设备枚举接口是否变化
+   - SwiftUI 行为差异（MenuBarExtra、Settings window）
+3. CI 中添加 macOS 16 runner（当 GitHub Actions 支持时）
+4. 对私有 API 调用加运行时 guard：调用失败时 graceful degrade 而非 crash
+
+---
+
+## 优先级总览
+
+```
+Phase 2: 工程质量基础    ████████████ P0 — 立即开始
+  2.1 测试基础设施         ●●●○  中等工作量，收益极高
+  2.2 CI/CD                ●●○○  小工作量，持续收益
+  2.3 服务层可测试性       ●●○○  小工作量，为测试铺路
+
+Phase 3: 架构优化         ████████████ P0 — 与 Phase 2 并行
+  3.1 拆分 SettingsRootView ●○○○  小工作量，立即改善开发体验
+  3.2 拆分 JitouchAppModel  ●●○○  中等工作量
+  3.3 拆分 CommandExecutor   ●●○○  中等工作量
+
+Phase 4: 稳定性与容错     ████████░░░░ P1
+  4.1 EventTap 恢复         ●●○○  关键稳定性
+  4.2 设备管理容错          ●○○○  小工作量
+  4.3 性能优化              ●●○○  需要 Instruments profiling
+
+Phase 5: 设置系统演进     ████░░░░░░░░ P2
+  5.1 Schema 版本化         ●●○○
+  5.2 设置导入/导出         ●○○○
+
+Phase 6: 功能增强         ████░░░░░░░░ P2-P3
+  6.1 国际化               ●●●○  覆盖面广
+  6.2 手势冲突检测          ●○○○
+  6.3 窗口管理增强          ●●○○
+  6.4 交互式手势教程        ●●○○
+  6.5 自定义手势录制        ●●●●  大型功能，远期
+
+Phase 7: 开源发布         ████████░░░░ P1
+  7.1 代码签名与分发        ●●●○  发布前必须
+  7.2 开源准备              ●●○○
+  7.3 macOS 兼容性验证      ●●○○  持续性工作
+```
+
+### 建议执行顺序
+
+```
+第 1 批（立即）:  2.1 + 2.2 + 3.1
+第 2 批:          2.3 + 3.2 + 3.3
+第 3 批:          4.1 + 4.2 + 7.1
+第 4 批:          5.1 + 6.1 + 7.2
+第 5 批:          4.3 + 5.2 + 6.2 + 6.3 + 7.3
+远期:             6.4 + 6.5
+```
+
+---
+
+## Milestone 1 — 工程质量基线与设置 UI 解耦
+
+> 对应“第 1 批（立即）”。目标不是增加功能，而是把后续迭代的基础设施和开发体验打稳。
+
+### 里程碑目标
+
+1. 建立最小可用测试体系，能在本地和 CI 中运行
+2. 建立第一份功能 parity 真值表，避免后续重构建立在错误假设上
+3. 将 `SettingsRootView.swift` 拆到可维护状态，降低后续 UI 迭代成本
+4. 建立 PR 级自动构建检查，避免主分支持续积累回归
+
+### 完成定义（Definition of Done）
+
+- `xcodebuild test` 可运行，至少覆盖首批核心识别器与设置兼容逻辑
+- GitHub Actions PR CI 可自动执行 `xcodegen generate` + `xcodebuild build`
+- `SettingsRootView.swift` 降到约 200-300 行，仅保留窗口级容器与导航
+- parity 清单已经落库，并明确第一批遗留项状态
+
+### 非目标（本里程碑不做）
+
+- 不在这一批处理 EventTap 自动恢复
+- 不在这一批推进 schema 版本化
+- 不在这一批做新功能增强
+- 不在这一批删除 `jitouch/` legacy 目录
+
+### Issue List
+
+| ID | 标题 | 来源 | 预估 | 依赖 |
+|----|------|------|------|------|
+| M1-01 | 建立功能 parity 真值表并校正文档状态 | Iteration A / Task A1 + A3 | S | 无 |
+| M1-02 | 添加 `JitouchTests` target 与测试目录骨架 | Phase 2 / Task 2.1 | S | 无 |
+| M1-03 | 实现 `TouchFrameFactory` 与首批测试夹具 | Phase 2 / Task 2.1 | M | M1-02 |
+| M1-04 | 补第一批识别器与设置兼容测试 | Phase 2 / Task 2.1 | M | M1-03 |
+| M1-05 | 建立 PR CI 基线工作流 | Phase 2 / Task 2.2 | S | M1-02 |
+| M1-06 | 拆分 `SettingsRootView` 为 Tab 容器 + 子视图骨架 | Phase 3 / Task 3.1 | M | 无 |
+| M1-07 | 提取 Settings 公共组件并完成 UI 拆分收尾 | Phase 3 / Task 3.1 | M | M1-06 |
+
+### Issue 细化
+
+#### M1-01 — 建立功能 parity 真值表并校正文档状态
+
+**目标**
+- 形成一份可以持续维护的旧功能对照表，明确哪些能力已经迁移、哪些待验证、哪些决定废弃。
+
+**建议交付物**
+- `docs/parity-matrix.md`
+- 更新 `REFACTOR_TASKS.md` / `README.md` 中过于乐观的状态描述
+
+**任务拆分**
+1. 从 `jitouch/Jitouch/Gesture.m` 提取全部手势名和动作名
+2. 在新仓库中逐项对照：
+   - 新 recognizer 是否能产出该手势事件
+   - 新 command executor 是否能执行该动作
+3. 标记状态：
+   - `已迁移并验证`
+   - `已迁移待真机验证`
+   - `未迁移`
+   - `已废弃`
+4. 第一批必须单独列出的遗留项：
+   - `Two-Fix One-Slide-*`（Trackpad）
+   - `One-Fix Three-Slide`
+   - `Quick Tab Switching`
+   - `Select Tab Above Cursor`
+   - `Dashboard`
+   - `Spaces`
+
+**验收标准**
+- 团队可以明确回答“删除 legacy 前还差什么”
+- 后续 issue 能直接引用 parity 清单
+
+#### M1-02 — 添加 `JitouchTests` target 与测试目录骨架
+
+**目标**
+- 让仓库第一次具备可运行测试 target。
+
+**涉及文件**
+- `project.yml`
+- `JitouchTests/`
+
+**任务拆分**
+1. 在 `project.yml` 添加 `JitouchTests`
+2. 创建基础目录：
+   - `JitouchTests/TestHelpers/`
+   - `JitouchTests/Recognizers/`
+   - `JitouchTests/Services/`
+3. 生成工程并确认 test target 能被 Xcode / `xcodebuild` 识别
+
+**验收标准**
+- `xcodegen generate` 后存在 `JitouchTests`
+- `xcodebuild test -scheme Jitouch` 至少能启动测试流程
+
+#### M1-03 — 实现 `TouchFrameFactory` 与首批测试夹具
+
+**目标**
+- 让识别器测试可读、可复用、可扩展，而不是在每个测试里手写低层 `TouchFrame`。
+
+**建议交付物**
+- `JitouchTests/TestHelpers/TouchFrameFactory.swift`
+- 如有必要：`GestureFixtureBuilder.swift`
+
+**任务拆分**
+1. 封装常用辅助：
+   - 单帧 `TouchFrame` builder
+   - 多帧序列 builder
+   - 常用触点状态快捷构造
+2. 内置首批轨迹夹具：
+   - 三指左滑 / 右滑 / 上滑 / 下滑
+   - 三指 tap / 四指 tap
+   - 固定指 tap / 固定指双滑
+   - 字符 `L` / `B` / `Up` / `Left`
+
+**验收标准**
+- 后续识别器测试能用工厂函数表达，不需要重复写底层 frame 组装
+
+#### M1-04 — 补第一批识别器与设置兼容测试
+
+**目标**
+- 给高 ROI 模块先加防回归网。
+
+**建议测试范围**
+- `CharacterRecognitionEngineTests`
+- `TrackpadSwipeRecognizerTests`
+- `TrackpadTapRecognizerTests`
+- `TrackpadFixFingerRecognizerTests`
+- `MagicMouseRecognizerTests`
+- `LegacySettingsStoreTests`
+
+**任务拆分**
+1. 先覆盖纯算法与纯状态机
+2. 再覆盖 legacy 设置兼容：
+   - 默认值回退
+   - 布尔 / 数值 /字符串兼容读取
+   - command sets 反序列化
+3. 为已知 tricky case 留回归样本
+
+**验收标准**
+- 至少 6 个测试文件
+- 能覆盖第一批最常修改、最易回归的识别逻辑
+
+#### M1-05 — 建立 PR CI 基线工作流
+
+**目标**
+- 每次提交自动校验“工程可生成、代码可编译”。
+
+**建议交付物**
+- `.github/workflows/ci.yml`
+
+**任务拆分**
+1. 安装 `xcodegen`
+2. 运行 `xcodegen generate`
+3. 运行 `xcodebuild build -scheme Jitouch -configuration Debug CODE_SIGNING_ALLOWED=NO`
+4. 测试 target 就绪后追加 `xcodebuild test`
+
+**验收标准**
+- PR / push 到主分支自动触发
+- 构建失败能阻止低质量变更直接进入主线
+
+#### M1-06 — 拆分 `SettingsRootView` 为 Tab 容器 + 子视图骨架
+
+**目标**
+- 先拆结构，不在第一步里做 UI 行为变更。
+
+**建议拆分方式**
+- `SettingsRootView.swift`：只保留导航和容器布局
+- `Views/Settings/OverviewTab.swift`
+- `Views/Settings/PermissionsTab.swift`
+- `Views/Settings/TrackpadSettingsTab.swift`
+- `Views/Settings/MagicMouseSettingsTab.swift`
+- `Views/Settings/CharacterRecognitionTab.swift`
+- `Views/Settings/GeneralSettingsTab.swift`
+- `Views/Settings/DiagnosticsTab.swift`
+
+**任务拆分**
+1. 先创建空骨架并接线
+2. 逐段搬运现有 body 内容
+3. 保持所有 binding 与 environment 注入不变
+
+**验收标准**
+- UI 行为无变化
+- 主文件显著缩小
+
+#### M1-07 — 提取 Settings 公共组件并完成 UI 拆分收尾
+
+**目标**
+- 把拆出来的 tab 再进一步去重，避免复制粘贴式重构。
+
+**建议提取的组件**
+- `GestureEditorView`
+- `CommandPickerView`
+- `AppOverridePickerView`
+- `SettingsSectionCard`
+- `DiagnosticMetricRow`
+
+**任务拆分**
+1. 抽出重复 section / row / picker
+2. 统一命名和目录结构
+3. 顺手补最基础的 preview 或构造样例
+
+**验收标准**
+- Tab 文件职责清晰
+- 公共 UI 组件可在后续设置页复用
+
+### 建议并行方式
+
+```
+并行流 A: M1-01 + M1-02 + M1-06
+并行流 B: M1-03 + M1-05（在 M1-02 完成后）
+并行流 C: M1-04 + M1-07（分别依赖 M1-03 / M1-06）
+```
+
+### 建议合入顺序
+
+```
+PR 1: M1-02 测试 target 骨架
+PR 2: M1-01 parity 真值表与文档校正
+PR 3: M1-06 SettingsRootView 骨架拆分
+PR 4: M1-03 测试夹具
+PR 5: M1-05 CI 基线
+PR 6: M1-04 第一批测试
+PR 7: M1-07 UI 组件抽取收尾
+```
+
+---
+
+## 架构概览（当前）
 
 ```
 Jitouch.app (Pure Swift, SwiftUI, macOS 15+)
 ├── App Layer          — SwiftUI 生命周期、MenuBarExtra、Settings 界面
 ├── Command Layer      — 手势→动作映射、CommandExecutor
-├── Gesture Layer      — 手势识别状态机 (纯 Swift)
+├── Gesture Layer      — 手势识别状态机 (12 个识别器, GestureRecognizerProtocol)
 ├── Touch Layer        — MultitouchSupport 私有 API (C header + Swift 直接调用)
 ├── Event Layer        — CGEventTap 鼠标事件拦截 (Swift CGEvent API)
 └── Device Layer       — IOKit 设备热插拔 (Swift IOKit API)
 ```
 
-**私有 API 边界**: 仅 MultitouchSupport.h 一个 C 头文件，通过 Bridging Header 导入，Swift 直接调用 C 函数，无需任何 .m 文件。
+**私有 API 边界**: 仅 `MultitouchSupport.h` 一个 C 头文件，通过 Bridging Header 导入。
 
----
-
-## Phase 1: 项目基础搭建
-
-### Task 1.1 — 创建纯 Swift 项目结构
+### 文件结构
 
 ```
-请在 /Users/lusheng/Documents/开发/Jitouch/ 下创建新的 Xcode 项目和目录结构。
-要求纯 Swift 项目，不包含任何 ObjC .m 文件。
+JitouchApp/
+├── App/
+│   └── JitouchApp.swift                          # @main 入口
+├── Models/
+│   ├── AppSettings.swift                         # JitouchSettings, Handedness, LogLevel
+│   ├── CommandModels.swift                       # GestureCommand, ApplicationCommandSet
+│   ├── TouchModels.swift                         # TouchFrame, TouchPoint, GestureEvent
+│   ├── OnboardingModels.swift                    # OnboardingChecklistItem
+│   └── SettingsNavigationModels.swift            # JitouchSettingsPane
+├── Services/
+│   ├── JitouchAppModel.swift                     # 中央状态协调
+│   ├── CommandExecutor.swift                     # 手势→命令执行
+│   ├── CommandCatalog.swift                      # 手势→命令映射目录
+│   ├── DeviceManager.swift                       # MTDevice 管理
+│   ├── EventTapManager.swift                     # CGEventTap 管理
+│   ├── GestureEngine.swift                       # 识别器路由
+│   ├── LegacySettingsStore.swift                 # 旧 plist 兼容
+│   ├── AccessibilityPermissionService.swift      # AXIsProcessTrusted
+│   ├── LaunchAtLoginService.swift                # SMAppService
+│   ├── KeyboardSimulationService.swift           # CGEvent 键盘模拟
+│   ├── MagicMouseCharacterRecognitionService.swift
+│   ├── CommandFeedbackOverlayController.swift    # 命令执行反馈 overlay
+│   ├── CharacterRecognitionOverlayController.swift
+│   ├── CharacterRecognitionDiagnosticsStore.swift
+│   └── Recognizers/
+│       ├── GestureRecognizerProtocol.swift
+│       ├── TrackpadTapRecognizer.swift
+│       ├── TrackpadSwipeRecognizer.swift
+│       ├── TrackpadFixFingerRecognizer.swift
+│       ├── TrackpadPinchRecognizer.swift
+│       ├── TrackpadMoveResizeRecognizer.swift
+│       ├── TrackpadTabSwitchRecognizer.swift
+│       ├── TrackpadCharacterRecognizer.swift
+│       ├── TrackpadOneFingerCharacterRecognizer.swift
+│       ├── TrackpadGestureContext.swift
+│       ├── CharacterRecognitionEngine.swift
+│       └── MagicMouseRecognizer.swift
+├── Views/
+│   ├── SettingsRootView.swift                    # 设置窗口 (待拆分)
+│   ├── MenuBarContentView.swift                  # 菜单栏内容
+│   ├── OnboardingFlowView.swift                  # 首次启动向导
+│   ├── JitouchChrome.swift                       # 可复用 UI 组件
+│   └── ShortcutRecorderField.swift               # 快捷键录制
+├── PrivateAPI/
+│   ├── MultitouchSupport.h
+│   └── PrivateAPIs.h
+├── Jitouch-Bridging-Header.h
+└── Resources/
+    ├── Info.plist
+    └── Assets.xcassets/
 
-补充实现建议：
-- 使用 `project.yml` + `xcodegen generate` 生成 `Jitouch.xcodeproj`
-- 将 `project.yml` 视为工程真源，避免后续多人协作时直接手改 `pbxproj`
-
-1. 创建目录结构:
-   Jitouch/
-   ├── JitouchApp/
-   │   ├── App/
-   │   │   └── JitouchApp.swift          # @main 入口
-   │   ├── Views/                         # SwiftUI 视图
-   │   ├── Models/                        # 数据模型
-   │   ├── Services/                      # 业务服务层
-   │   ├── PrivateAPI/                    # 私有 API C 头文件
-   │   │   ├── MultitouchSupport.h        # MultitouchSupport 类型和函数声明
-   │   │   └── PrivateAPIs.h              # 其他私有 C 函数声明 (CoreDockSendNotification 等)
-   │   ├── Jitouch-Bridging-Header.h      # 桥接头文件，引入上述 .h
-   │   └── Resources/
-   │       └── Assets.xcassets/           # 图标和图片资源
-   ├── Jitouch.xcodeproj/
-   └── jitouch/                           # 旧 ObjC 源码 (仅参考)
-
-2. Xcode 工程配置:
-   - Product: Jitouch.app
-   - Bundle ID: com.jitouch.Jitouch
-   - Deployment Target: macOS 15.0
-   - Swift Language Version: 6.0
-   - App Category: public.app-category.utilities
-   - App Sandbox: 关闭 (需要 CGEventTap、Accessibility API、私有框架)
-   - Hardened Runtime: 开启，但禁用 Library Validation (需加载私有框架)
-   - Signing: Sign to Run Locally
-   - Framework Search Paths: /System/Library/PrivateFrameworks (用于链接 MultitouchSupport.framework)
-   - Other Linker Flags: -framework MultitouchSupport -weak_framework MultitouchSupport
-   - Bridging Header: JitouchApp/Jitouch-Bridging-Header.h
-   - Info.plist:
-     - LSUIElement = true (无 Dock 图标)
-     - NSAppleEventsUsageDescription = "Jitouch needs to control applications for gesture commands."
-
-3. 创建 Assets.xcassets:
-   - AppIcon: 使用现有 jitouchicon.icns 转换
-   - 菜单栏图标: 从 logosmall.png / logosmalloff.png 制作 Template Image
-   - 手势图标: circle.png, move.png, resize.png, tab.png 导入为 Image Set
-
-4. 创建 JitouchApp.swift 最小可运行版本:
-   ```swift
-   import SwiftUI
-
-   @main
-   struct JitouchApp: App {
-       var body: some Scene {
-           MenuBarExtra("Jitouch", image: "MenuBarIcon") {
-               Button("Preferences...") {
-                   // TODO
-               }
-               .keyboardShortcut(",", modifiers: .command)
-               Divider()
-               Button("Quit Jitouch") {
-                   NSApplication.shared.terminate(nil)
-               }
-               .keyboardShortcut("q", modifiers: .command)
-           }
-           Settings {
-               Text("Jitouch Settings")
-                   .frame(width: 600, height: 400)
-           }
-       }
-   }
-   ```
-
-5. 验证: 项目能编译运行，菜单栏显示图标，点击可看到菜单和空设置窗口。
+jitouch/                                          # 旧 ObjC 源码 (仅参考)
 ```
 
-### Task 1.2 — 创建 MultitouchSupport C 头文件
-
-```
-创建 MultitouchSupport.h 和 PrivateAPIs.h，仅做类型和函数声明，无需任何 .m 实现文件。
-Swift 将通过 Bridging Header 直接调用这些 C 函数。
-
-参考旧代码: jitouch/Jitouch/Gesture.h 第74-116行的类型定义。
-
-1. 创建 JitouchApp/PrivateAPI/MultitouchSupport.h:
-
-   ```c
-   #ifndef MultitouchSupport_h
-   #define MultitouchSupport_h
-
-   #include <CoreFoundation/CoreFoundation.h>
-
-   // Opaque device reference
-   typedef struct __MTDevice* MTDeviceRef;
-
-   // Touch state
-   typedef enum {
-       MTTouchStateNotTracking = 0,
-       MTTouchStateStartInRange = 1,
-       MTTouchStateHoverInRange = 2,
-       MTTouchStateMakeTouch = 3,
-       MTTouchStateTouching = 4,
-       MTTouchStateBreakTouch = 5,
-       MTTouchStateLingerInRange = 6,
-       MTTouchStateOutOfRange = 7
-   } MTTouchState;
-
-   // Vector and readout
-   typedef struct { float x, y; } MTVector;
-   typedef struct { MTVector pos; MTVector vel; } MTReadout;
-
-   // Finger data (passed in callback)
-   typedef struct {
-       int frame;
-       double timestamp;
-       int identifier;
-       MTTouchState state;
-       int fingerId;
-       int handId;
-       MTReadout normalized;
-       float size;
-       int zero1;
-       float angle;
-       float majorAxis;
-       float minorAxis;
-       MTReadout mm;
-       int zero2[2];
-       float zDensity;
-   } Finger;
-
-   // Callback type
-   typedef int (*MTContactCallbackFunction)(MTDeviceRef device,
-                                             Finger *data,
-                                             int nFingers,
-                                             double timestamp,
-                                             int frame);
-
-   // Device functions
-   CFMutableArrayRef MTDeviceCreateList(void);
-   void MTRegisterContactFrameCallback(MTDeviceRef, MTContactCallbackFunction);
-   void MTUnregisterContactFrameCallback(MTDeviceRef, MTContactCallbackFunction);
-   void MTDeviceStart(MTDeviceRef, int);  // 0 = default run loop mode
-   void MTDeviceStop(MTDeviceRef);
-   bool MTDeviceIsRunning(MTDeviceRef);
-   void MTDeviceGetFamilyID(MTDeviceRef, int *familyID);
-
-   // Weak import: not available on all OS versions
-   void MTDeviceGetDeviceID(MTDeviceRef, uint64_t *deviceID)
-       __attribute__((weak_import));
-
-   #endif
-   ```
-
-2. 创建 JitouchApp/PrivateAPI/PrivateAPIs.h:
-
-   ```c
-   #ifndef PrivateAPIs_h
-   #define PrivateAPIs_h
-
-   #include <CoreFoundation/CoreFoundation.h>
-
-   // Dock/Mission Control private API
-   void CoreDockSendNotification(CFStringRef notification);
-
-   #endif
-   ```
-
-3. 创建 JitouchApp/Jitouch-Bridging-Header.h:
-
-   ```c
-   #import "PrivateAPI/MultitouchSupport.h"
-   #import "PrivateAPI/PrivateAPIs.h"
-   ```
-
-4. 验证 Swift 中可以访问这些类型:
-   在 JitouchApp.swift 中临时添加测试代码:
-   ```swift
-   func testBridge() {
-       let devices = MTDeviceCreateList() as! [MTDeviceRef]
-       print("Found \(devices.count) multitouch devices")
-   }
-   ```
-   编译通过即可（运行时测试需在真机上）。
-```
-
----
-
-## Phase 2: 核心引擎移植
-
-### Task 2.1 — 触摸数据模型
-
-```
-创建纯 Swift 触摸数据模型，替代旧代码中的 C 结构体和全局变量。
-
-参考旧代码:
-- jitouch/Jitouch/Gesture.h: Finger 结构体
-- jitouch/Jitouch/Gesture.m 第126-181行: 全局状态变量
-
-创建 JitouchApp/Models/TouchModels.swift:
-
-1. TouchPoint — 单个触摸点 (从 C Finger 转换而来):
-   ```swift
-   struct TouchPoint: Sendable {
-       let id: Int               // Finger.identifier
-       let state: TouchState
-       let position: CGPoint     // normalized 0-1 (from Finger.normalized.pos)
-       let velocity: CGVector    // from Finger.normalized.vel
-       let size: Float
-       let angle: Float
-       let majorAxis: Float
-       let minorAxis: Float
-       let timestamp: Double
-
-       /// 从 C Finger 结构体转换
-       init(finger: Finger) { ... }
-   }
-   ```
-
-2. TouchState 枚举 (映射 MTTouchState):
-   ```swift
-   enum TouchState: Int, Sendable {
-       case notTracking = 0
-       case startInRange = 1
-       case hoverInRange = 2
-       case makeTouch = 3
-       case touching = 4
-       case breakTouch = 5
-       case lingerInRange = 6
-       case outOfRange = 7
-
-       var isActive: Bool { self == .touching || self == .makeTouch }
-   }
-   ```
-
-3. TouchFrame — 一帧触摸数据:
-   ```swift
-   struct TouchFrame: Sendable {
-       let touches: [TouchPoint]
-       let timestamp: Double
-       let deviceType: DeviceType
-
-       var activeTouches: [TouchPoint] { touches.filter { $0.state.isActive } }
-       var fingerCount: Int { activeTouches.count }
-   }
-   ```
-
-4. DeviceType:
-   ```swift
-   enum DeviceType: Sendable {
-       case trackpad
-       case magicMouse
-   }
-   ```
-
-5. GestureEvent — 识别器输出:
-   ```swift
-   enum GestureEvent: Sendable {
-       case threeFingerTap
-       case threeFingerSwipe(Direction)
-       case fourFingerTap
-       case fourFingerSwipe(Direction)
-       case oneFixOneTap(Side)           // left/right
-       case oneFixTwoSlide(Direction)
-       case twoFixIndexDoubleTap
-       case twoFixOneSlide(Direction)
-       case threeFingerPinch(PinchDirection)
-       case moveResize(MoveResizePhase)
-       case tabSwitch(TabDirection)
-       case characterRecognized(Character)
-       // Magic Mouse specific
-       case mmThreeFingerSwipe(Direction)
-       case mmMiddleClick
-       case mmVShapeMoveResize(MoveResizePhase)
-   }
-
-   enum Direction: Sendable { case left, right, up, down }
-   enum Side: Sendable { case left, right }
-   enum PinchDirection: Sendable { case inward, outward }
-   enum TabDirection: Sendable { case pinkyToIndex, indexToPinky }
-   enum MoveResizePhase: Sendable { case began, changed(dx: CGFloat, dy: CGFloat), ended }
-   ```
-
-所有类型必须是值类型 (struct/enum) 并符合 Sendable。
-```
-
-### Task 2.2 — 设备管理服务
-
-```
-创建 JitouchApp/Services/DeviceManager.swift，纯 Swift 实现多点触控设备管理。
-
-参考旧代码:
-- jitouch/Jitouch/Gesture.m 第2853-2926行: IOKit 设备通知
-- jitouch/Jitouch/Gesture.m 第3180-3230行: startDevice/stopDevice
-- jitouch/Jitouch/Gesture.m 第2795-2852行: 回调注册
-
-通过 Bridging Header 直接调用 MultitouchSupport C 函数，无需 ObjC 包装。
-
-1. DeviceManager (@Observable, @MainActor):
-
-   ```swift
-   @Observable
-   @MainActor
-   final class DeviceManager {
-       private(set) var trackpadDevices: [MTDeviceRef] = []
-       private(set) var magicMouseDevices: [MTDeviceRef] = []
-       private(set) var isRunning = false
-
-       // 触摸回调 (C 函数指针，使用 @convention(c))
-       private var trackpadCallback: MTContactCallbackFunction?
-       private var magicMouseCallback: MTContactCallbackFunction?
-
-       func start(
-           trackpadHandler: @escaping MTContactCallbackFunction,
-           mouseHandler: @escaping MTContactCallbackFunction
-       ) { ... }
-
-       func stop() { ... }
-   }
-   ```
-
-2. 设备发现和分类:
-   - 调用 MTDeviceCreateList() 获取所有设备
-   - 用 MTDeviceGetFamilyID() 分类:
-     * familyID in [98,99,100,101,102,103]: 确定是 Trackpad
-     * familyID == 128 或 129: 确定是 Magic Mouse
-     * familyID == 112: 需要通过 IOKit IORegistryEntrySearchCFProperty
-       查询 "Multitouch ID" 进一步区分 (Trackpad vs Mouse)
-   - 直接用 Swift IOKit API: IOServiceGetMatchingServices, IORegistryEntrySearchCFProperty
-
-3. 设备启动:
-   - MTRegisterContactFrameCallback(device, callback)
-   - MTDeviceStart(device, 0)
-   - 回调函数必须是 @convention(c) 全局/静态函数
-   - 在全局函数中通过 Unmanaged<DeviceManager> 或全局变量回调到 Swift
-
-4. IOKit 热插拔监听:
-   - IOServiceAddMatchingNotification 监听 "AppleMultitouchDevice"
-   - 设备添加: 重新扫描并注册回调
-   - 设备移除: 停止并清理
-   - 添加重试机制: 设备插入后可能需要延迟才能启动 (Timer 重试 3 次，每次 1 秒)
-
-5. 系统唤醒处理:
-   - 监听 NSWorkspace.didWakeNotification
-   - 唤醒后调用 stop() 再 start() 重新初始化所有设备
-
-验证: 运行后能打印检测到的设备数量和类型。
-```
-
-### Task 2.3 — 手势识别引擎 (核心)
-
-```
-这是最核心也是最复杂的 Task。将 Gesture.m 中 4300+ 行手势识别逻辑移植为纯 Swift。
-拆分为独立的识别器模块，每个遵循统一协议。
-
-参考旧代码 jitouch/Jitouch/Gesture.m 全文:
-- 第200-800行: trackpadCallback 触摸帧处理
-- 第800-1400行: Trackpad 各手势状态机
-- 第1400-2000行: Magic Mouse 各手势状态机
-- 第2000-2600行: 字符识别算法
-- 第2600-2800行: 命令分发 (doCommand)
-
-### 文件结构:
-
-1. Services/GestureEngine.swift — 主控制器
-2. Services/Recognizers/GestureRecognizerProtocol.swift — 统一协议
-3. Services/Recognizers/TrackpadTapRecognizer.swift — 三指/四指点击
-4. Services/Recognizers/TrackpadSwipeRecognizer.swift — 三指/四指滑动
-5. Services/Recognizers/FixFingerRecognizer.swift — 固定指+操作指组合手势
-6. Services/Recognizers/PinchRecognizer.swift — 三指捏合
-7. Services/Recognizers/MoveResizeRecognizer.swift — 移动/调整窗口大小
-8. Services/Recognizers/TabSwitchRecognizer.swift — Tab 切换
-9. Services/Recognizers/MagicMouseRecognizer.swift — Magic Mouse 手势
-10. Services/Recognizers/CharacterRecognizer.swift — 字符绘制识别
-
-### 统一协议:
-
-```swift
-protocol GestureRecognizer: AnyObject, Sendable {
-    var isEnabled: Bool { get set }
-    func processFrame(_ frame: TouchFrame) -> [GestureEvent]
-    func reset()
-}
-```
-
-### GestureEngine:
-
-```swift
-@Observable
-final class GestureEngine {
-    var onGestureEvent: ((GestureEvent) -> Void)?
-
-    private var trackpadRecognizers: [GestureRecognizer] = []
-    private var mouseRecognizers: [GestureRecognizer] = []
-
-    init() {
-        trackpadRecognizers = [
-            TrackpadTapRecognizer(),
-            TrackpadSwipeRecognizer(),
-            FixFingerRecognizer(),
-            PinchRecognizer(),
-            MoveResizeRecognizer(),
-            TabSwitchRecognizer(),
-            CharacterRecognizer(deviceType: .trackpad),
-        ]
-        mouseRecognizers = [
-            MagicMouseRecognizer(),
-            CharacterRecognizer(deviceType: .magicMouse),
-        ]
-    }
-
-    /// 由 DeviceManager 的 C 回调调用
-    func handleTouchFrame(_ frame: TouchFrame) {
-        let recognizers = frame.deviceType == .trackpad
-            ? trackpadRecognizers : mouseRecognizers
-        for recognizer in recognizers {
-            guard recognizer.isEnabled else { continue }
-            let events = recognizer.processFrame(frame)
-            for event in events {
-                onGestureEvent?(event)
-            }
-        }
-    }
-}
-```
-
-### 关键移植细节:
-
-**手指数量追踪** (参考旧代码 trackpadNFingers 变量):
-- 每帧统计 state == .touching 的手指数
-- 手指数变化 (nFingers: 0→3, 3→0 等) 触发手势开始/结束
-
-**时间窗口**:
-- 使用 CACurrentMediaTime() (等同于 mach_absolute_time)
-- 点击判定: 触摸持续时间 < clickSpeed 阈值
-- 滑动判定: 移动距离 > sensitivity 阈值
-
-**手指排序和识别** (参考旧代码 handed 逻辑):
-- 按 x 坐标排序确定手指身份 (拇指在最左/右)
-- 左手模式和右手模式影响排序方向
-- "固定指" 判定: 位移 < 阈值的手指
-
-**双指滑动抑制** (参考旧代码第2017-2022行):
-- 自然滚动时两指间距 < 阈值，不触发手势
-- 时间窗口: 两指事件后的短时间内不处理三指事件
-
-**Move/Resize 模式** (参考旧代码 moveResizeFlag):
-- 进入模式后通过 CGEventTap 拦截鼠标移动
-- 根据 dx/dy 移动或调整窗口大小
-- 需要与 EventTapManager 协作
-
-**字符识别算法** (参考旧代码第2000-2600行):
-- 记录手指轨迹点序列
-- 计算相邻点之间的角度 (DegreeSpan)
-- 与预定义字符模板匹配 (A-Z 各有 DegreeSpan 序列)
-- 评分系统选择最佳匹配
-
-每个识别器应可独立测试。先实现最常用的手势 (三指/四指滑动和点击)，
-逐步添加其他手势类型。
-```
-
-### Task 2.4 — CGEventTap 事件拦截
-
-```
-创建 JitouchApp/Services/EventTapManager.swift，纯 Swift 实现 CGEventTap。
-
-参考旧代码:
-- jitouch/Jitouch/Gesture.m 第3152-3178行: CGEventTap 创建
-- jitouch/Jitouch/Gesture.m 第2932-3150行: CGEventCallback
-- jitouch/Jitouch/Gesture.m 第3040-3100行: 超时恢复
-
-所有 CGEvent API 在 Swift 中都有原生绑定，无需 ObjC。
-
-1. EventTapManager:
-
-   ```swift
-   @Observable
-   @MainActor
-   final class EventTapManager {
-       private(set) var isRunning = false
-       private var eventTap: CFMachPort?
-       private var runLoopSource: CFRunLoopSource?
-
-       var onMouseEvent: ((CGEvent, CGEventType) -> CGEvent?)?
-
-       func start() throws {
-           guard AXIsProcessTrusted() else {
-               throw EventTapError.accessibilityNotGranted
-           }
-
-           let mask: CGEventMask =
-               (1 << CGEventType.scrollWheel.rawValue) |
-               (1 << CGEventType.mouseMoved.rawValue) |
-               (1 << CGEventType.leftMouseDown.rawValue) |
-               (1 << CGEventType.leftMouseUp.rawValue) |
-               (1 << CGEventType.rightMouseDown.rawValue) |
-               (1 << CGEventType.rightMouseUp.rawValue) |
-               (1 << CGEventType.otherMouseDown.rawValue) |
-               (1 << CGEventType.otherMouseUp.rawValue) |
-               (1 << CGEventType.leftMouseDragged.rawValue)
-
-           // 使用 CGEvent.tapCreate — Swift 原生 API
-           eventTap = CGEvent.tapCreate(
-               tap: .cgSessionEventTap,
-               place: .headInsertEventTap,
-               options: .defaultTap,
-               eventsOfInterest: mask,
-               callback: eventTapCallback,  // 全局 @convention(c) 函数
-               userInfo: Unmanaged.passUnretained(self).toOpaque()
-           )
-           // 添加到 RunLoop ...
-       }
-
-       func stop() { ... }
-   }
-   ```
-
-2. 事件回调 (全局 C 函数):
-   ```swift
-   private func eventTapCallback(
-       proxy: CGEventTapProxy,
-       type: CGEventType,
-       event: CGEvent,
-       userInfo: UnsafeMutableRawPointer?
-   ) -> Unmanaged<CGEvent>? {
-       // 处理 tapDisabledByTimeout: 重新启用
-       if type == .tapDisabledByTimeout {
-           CGEvent.tapEnable(tap: machPort, enable: true)
-           return Unmanaged.passRetained(event)
-       }
-       // 转发给 EventTapManager.onMouseEvent
-       let manager = Unmanaged<EventTapManager>.fromOpaque(userInfo!).takeUnretainedValue()
-       if let result = manager.onMouseEvent?(event, type) {
-           return Unmanaged.passRetained(result)
-       }
-       return Unmanaged.passRetained(event)
-   }
-   ```
-
-3. 事件处理逻辑 (由 GestureEngine 设置 onMouseEvent):
-   - 自动滚动模式: 修改 scrollWheel 事件的方向
-   - Move/Resize 模式: 拦截 mouseMoved 并移动/调整窗口
-   - 手势进行中: 吞掉 mouseDown/Up 防止误触发点击
-   - 正常模式: 透传所有事件
-
-4. 可靠性:
-   - tapDisabledByTimeout: 检测后自动 CGEvent.tapEnable
-   - 如果重新启用失败，重建整个 eventTap (参考旧代码的定时器重建机制)
-   - 使用 os.Logger 记录 tap 禁用/恢复事件
-
-5. 权限管理:
-   - start() 前检查 AXIsProcessTrusted()
-   - 未授权时抛出明确错误
-   - 提供 requestAccessibility() 调用 AXIsProcessTrustedWithOptions
-
-验证: 启动后能拦截鼠标事件并打印日志，不影响正常鼠标操作。
-```
-
----
-
-## Phase 3: 命令执行系统
-
-### Task 3.1 — 命令模型和执行器
-
-```
-创建命令系统，纯 Swift 实现所有手势动作。
-
-参考旧代码:
-- jitouch/Jitouch/Gesture.m 第636-793行: doCommand() 所有命令
-- jitouch/Jitouch/KeyUtility.m: 键盘模拟
-- jitouch/Jitouch/Settings.m: 手势→命令映射
-
-### 1. Models/GestureCommand.swift — 命令定义
-
-```swift
-enum CommandType: String, Codable, Sendable, CaseIterable {
-    // 窗口操作
-    case maximize, restore, fullscreen, minimize
-    case close, zoom, moveToNextScreen
-    case leftHalf, rightHalf, topHalf, bottomHalf  // 新增: 窗口分屏
-
-    // 导航
-    case browserBack, browserForward
-    case nextTab, previousTab, newTab, closeTab, reopenTab
-
-    // 系统
-    case missionControl, showDesktop, appExpose
-    case launchpad, spacesLeft, spacesRight
-    case notificationCenter  // 新增
-
-    // 应用
-    case appSwitcher, quitApp, hideApp
-
-    // 鼠标
-    case middleClick, autoScroll
-
-    // 自定义
-    case keystroke  // 需要附带 keyCode + modifiers
-    case none       // 禁用
-
-    var displayName: String { ... }
-    var category: CommandCategory { ... }
-}
-
-enum CommandCategory: String, CaseIterable {
-    case window = "窗口"
-    case navigation = "导航"
-    case system = "系统"
-    case app = "应用"
-    case mouse = "鼠标"
-    case custom = "自定义"
-}
-
-struct GestureBinding: Codable, Sendable, Identifiable {
-    let id: UUID
-    var gestureEvent: String     // GestureEvent 的序列化 key
-    var command: CommandType
-    var keyCode: Int?            // 仅 keystroke 命令
-    var modifierFlags: Int?      // 仅 keystroke 命令
-    var isEnabled: Bool
-}
-```
-
-### 2. Services/CommandExecutor.swift — 命令执行
-
-```swift
-@MainActor
-final class CommandExecutor {
-    func execute(_ command: CommandType, binding: GestureBinding?) async {
-        switch command {
-        case .maximize: await maximizeWindow()
-        case .fullscreen: await toggleFullscreen()
-        case .minimize: await minimizeWindow()
-        case .close: await closeWindow()
-        case .browserBack: simulateKeystroke(keyCode: 0x7B, cmd: true)  // Cmd+[
-        case .browserForward: simulateKeystroke(keyCode: 0x7C, cmd: true)
-        case .nextTab: simulateKeystroke(keyCode: 0x09, ctrl: true)  // Ctrl+Tab
-        case .missionControl: triggerMissionControl()
-        case .showDesktop: triggerShowDesktop()
-        case .keystroke:
-            if let kc = binding?.keyCode, let mf = binding?.modifierFlags {
-                simulateKeystroke(keyCode: kc, rawModifiers: mf)
-            }
-        // ... 其他命令
-        }
-    }
-}
-```
-
-### 3. Services/KeySimulator.swift — 键盘模拟 (纯 Swift)
-
-替代旧的 KeyUtility.m，使用 Swift CGEvent API:
-```swift
-func simulateKeystroke(keyCode: Int, shift: Bool = false, ctrl: Bool = false,
-                       alt: Bool = false, cmd: Bool = false) {
-    let source = CGEventSource(stateID: .hidSystemState)
-    let keyDown = CGEvent(keyboardEventSource: source,
-                          virtualKey: CGKeyCode(keyCode), keyDown: true)
-    let keyUp = CGEvent(keyboardEventSource: source,
-                        virtualKey: CGKeyCode(keyCode), keyDown: false)
-    var flags: CGEventFlags = []
-    if shift { flags.insert(.maskShift) }
-    if ctrl { flags.insert(.maskControl) }
-    if alt { flags.insert(.maskAlternate) }
-    if cmd { flags.insert(.maskCommand) }
-    keyDown?.flags = flags
-    keyUp?.flags = flags
-    keyDown?.post(tap: .cgSessionEventTap)
-    keyUp?.post(tap: .cgSessionEventTap)
-}
-
-// 特殊键 (媒体控制) — 使用 NSEvent
-func simulateSpecialKey(_ keyType: Int) {
-    // NX_KEYTYPE_PLAY, NX_KEYTYPE_NEXT 等
-    // 使用 NSEvent.otherEvent(with: .systemDefined, ...) 并 CGEvent.post
-}
-```
-
-### 4. Services/AccessibilityHelper.swift — 窗口操作 (纯 Swift AXUIElement)
-
-```swift
-@MainActor
-final class AccessibilityHelper {
-    static func getFocusedWindow() -> AXUIElement? {
-        let systemWide = AXUIElementCreateSystemWide()
-        var focusedApp: AnyObject?
-        AXUIElementCopyAttributeValue(systemWide, kAXFocusedApplicationAttribute as CFString, &focusedApp)
-        guard let app = focusedApp else { return nil }
-        var focusedWindow: AnyObject?
-        AXUIElementCopyAttributeValue(app as! AXUIElement, kAXFocusedWindowAttribute as CFString, &focusedWindow)
-        return focusedWindow as! AXUIElement?
-    }
-
-    static func setWindowPosition(_ window: AXUIElement, _ point: CGPoint) { ... }
-    static func setWindowSize(_ window: AXUIElement, _ size: CGSize) { ... }
-    static func maximizeWindow(_ window: AXUIElement) { ... }
-    static func pressButton(_ window: AXUIElement, attribute: String) { ... }
-}
-```
-
-### 5. 系统命令:
-- Mission Control: CoreDockSendNotification("com.apple.expose.awake" as CFString)
-  (通过 PrivateAPIs.h 声明，Swift 直接调用)
-- Show Desktop: CoreDockSendNotification("com.apple.expose.front.awake" as CFString)
-- Launchpad: CoreDockSendNotification("com.apple.launchpad.toggle" as CFString)
-- Spaces Left/Right: 模拟 Ctrl+←/→ 按键
-
-验证: 能独立测试每个命令 (手动调用 execute)。
-```
-
-### Task 3.2 — 设置管理系统
-
-```
-创建纯 Swift 设置管理，使用 @Observable + Codable + UserDefaults。
-
-参考旧代码:
-- jitouch/Jitouch/Settings.m: CFPreferences 读写
-- jitouch/Jitouch/Settings.h: 设置键名
-
-### 1. Models/AppSettings.swift:
-
-```swift
-@Observable
-final class AppSettings: Codable {
-    // 通用
-    var isEnabled: Bool = true
-    var clickSpeed: Double = 0.5     // 0.0 (快) - 1.0 (慢)
-    var sensitivity: Double = 0.5    // 0.0 (低) - 1.0 (高)
-    var showMenuBarIcon: Bool = true
-    var launchAtLogin: Bool = false
-
-    // 触控板
-    var trackpadEnabled: Bool = true
-    var trackpadLeftHanded: Bool = false
-    var trackpadBindings: [GestureBinding] = GestureBinding.defaultTrackpadBindings
-    var trackpadAppBindings: [String: [GestureBinding]] = [:]  // bundleID → bindings
-
-    // Magic Mouse
-    var magicMouseEnabled: Bool = true
-    var magicMouseLeftHanded: Bool = false
-    var magicMouseBindings: [GestureBinding] = GestureBinding.defaultMouseBindings
-    var magicMouseAppBindings: [String: [GestureBinding]] = [:]
-
-    // 字符识别
-    var charRecognitionTrackpad: Bool = false
-    var charRecognitionMouse: Bool = false
-    var charRecognitionBindings: [GestureBinding] = []
-}
-```
-
-### 2. Services/SettingsManager.swift:
-
-```swift
-@Observable
-@MainActor
-final class SettingsManager {
-    private(set) var settings: AppSettings
-
-    private let defaults = UserDefaults(suiteName: "com.jitouch.Jitouch")!
-    private let storageKey = "AppSettings_v3"
-
-    init() {
-        // 尝试加载已保存设置，否则尝试迁移旧版本，否则使用默认值
-        if let data = defaults.data(forKey: storageKey),
-           let saved = try? JSONDecoder().decode(AppSettings.self, from: data) {
-            settings = saved
-        } else {
-            settings = Self.migrateFromLegacy() ?? AppSettings()
-        }
-    }
-
-    func save() {
-        guard let data = try? JSONEncoder().encode(settings) else { return }
-        defaults.set(data, forKey: storageKey)
-    }
-
-    /// 从旧版 CFPreferences 数据迁移
-    private static func migrateFromLegacy() -> AppSettings? {
-        let oldDefaults = UserDefaults(suiteName: "com.jitouch.Jitouch")!
-        guard oldDefaults.bool(forKey: "enAll") != false ||
-              oldDefaults.object(forKey: "enAll") != nil else { return nil }
-        // 读取旧键值并转换为新格式...
-        let settings = AppSettings()
-        settings.isEnabled = oldDefaults.bool(forKey: "enAll")
-        settings.clickSpeed = oldDefaults.double(forKey: "ClickSpeed")
-        settings.sensitivity = oldDefaults.double(forKey: "Sensitivity")
-        settings.trackpadEnabled = oldDefaults.bool(forKey: "enTPAll")
-        settings.trackpadLeftHanded = oldDefaults.bool(forKey: "Handed")
-        settings.magicMouseEnabled = oldDefaults.bool(forKey: "enMMAll")
-        settings.magicMouseLeftHanded = oldDefaults.bool(forKey: "MMHanded")
-        // ... 迁移手势绑定映射 (trackpadMap, magicMouseMap, recognitionMap)
-        return settings
-    }
-
-    /// 查找手势对应的命令
-    func command(for gesture: GestureEvent, app bundleID: String?) -> CommandType {
-        // 1. 先查 app 特定绑定
-        // 2. 再查全局绑定
-        // 3. 未找到返回 .none
-    }
-}
-```
-
-### 3. Launch at Login:
-
-```swift
-import ServiceManagement
-
-extension SettingsManager {
-    func setLaunchAtLogin(_ enabled: Bool) {
-        do {
-            if enabled {
-                try SMAppService.mainApp.register()
-            } else {
-                try SMAppService.mainApp.unregister()
-            }
-            settings.launchAtLogin = enabled
-            save()
-        } catch {
-            // 处理错误
-        }
-    }
-}
-```
-
-### 4. 默认绑定:
-
-```swift
-extension GestureBinding {
-    static let defaultTrackpadBindings: [GestureBinding] = [
-        .init(gesture: "threeFingerTap", command: .middleClick),
-        .init(gesture: "threeFingerSwipeLeft", command: .browserBack),
-        .init(gesture: "threeFingerSwipeRight", command: .browserForward),
-        .init(gesture: "threeFingerSwipeUp", command: .missionControl),
-        .init(gesture: "threeFingerSwipeDown", command: .appExpose),
-        .init(gesture: "fourFingerTap", command: .showDesktop),
-        .init(gesture: "fourFingerSwipeLeft", command: .spacesRight),
-        .init(gesture: "fourFingerSwipeRight", command: .spacesLeft),
-        // ...
-    ]
-}
-```
-
-验证: 设置能保存和恢复，旧版数据能迁移。
-```
-
----
-
-## Phase 4: SwiftUI 用户界面
-
-### Task 4.1 — 菜单栏和设置主框架
-
-```
-创建完整的 SwiftUI 菜单栏应用和设置窗口框架。
-
-### 1. 更新 App/JitouchApp.swift:
-
-```swift
-@main
-struct JitouchApp: App {
-    @State private var appState = AppState()
-
-    var body: some Scene {
-        MenuBarExtra {
-            MenuBarView(appState: appState)
-        } label: {
-            Image(appState.isEnabled ? "MenuBarIcon" : "MenuBarIconOff")
-                .renderingMode(.template)
-        }
-
-        Settings {
-            SettingsView(appState: appState)
-        }
-    }
-}
-```
-
-### 2. App/AppState.swift — 全局状态:
-
-```swift
-@Observable
-@MainActor
-final class AppState {
-    let settingsManager = SettingsManager()
-    let deviceManager = DeviceManager()
-    let gestureEngine = GestureEngine()
-    let eventTapManager = EventTapManager()
-    let commandExecutor = CommandExecutor()
-    let permissionManager = PermissionManager()
-
-    var isEnabled: Bool { settingsManager.settings.isEnabled }
-    var hasPermission: Bool { permissionManager.hasAccessibilityPermission }
-
-    func startup() async { ... }  // 初始化流程
-    func shutdown() { ... }
-    func toggle() { ... }         // 开/关切换
-}
-```
-
-### 3. Views/MenuBarView.swift:
-
-```swift
-struct MenuBarView: View {
-    @Bindable var appState: AppState
-
-    var body: some View {
-        Toggle(appState.isEnabled ? "Jitouch is On" : "Jitouch is Off",
-               isOn: $appState.settingsManager.settings.isEnabled)
-        Divider()
-        // 连接状态
-        if !appState.deviceManager.trackpadDevices.isEmpty {
-            Label("Trackpad Connected", systemImage: "hand.point.up.fill")
-        }
-        if !appState.deviceManager.magicMouseDevices.isEmpty {
-            Label("Magic Mouse Connected", systemImage: "magicmouse.fill")
-        }
-        Divider()
-        SettingsLink { Text("Settings...") }
-            .keyboardShortcut(",", modifiers: .command)
-        Divider()
-        Button("Quit Jitouch") { NSApplication.shared.terminate(nil) }
-            .keyboardShortcut("q", modifiers: .command)
-    }
-}
-```
-
-### 4. Views/SettingsView.swift:
-
-```swift
-struct SettingsView: View {
-    @Bindable var appState: AppState
-
-    var body: some View {
-        TabView {
-            GeneralSettingsView(settings: appState.settingsManager)
-                .tabItem { Label("General", systemImage: "gear") }
-            TrackpadSettingsView(settings: appState.settingsManager)
-                .tabItem { Label("Trackpad", systemImage: "hand.point.up") }
-            MagicMouseSettingsView(settings: appState.settingsManager)
-                .tabItem { Label("Magic Mouse", systemImage: "magicmouse") }
-            CharacterSettingsView(settings: appState.settingsManager)
-                .tabItem { Label("Characters", systemImage: "pencil.line") }
-            AboutView()
-                .tabItem { Label("About", systemImage: "info.circle") }
-        }
-        .frame(width: 650, height: 500)
-    }
-}
-```
-
-### 5. Views/GeneralSettingsView.swift:
-
-- 总开关、灵敏度滑块、点击速度滑块
-- Launch at Login 开关
-- 菜单栏图标显示/隐藏
-- 辅助功能权限状态 + 授权按钮
-
-### 6. Views/AboutView.swift:
-
-- App 图标和版本号
-- 原作者致谢
-- GPL v3 许可证信息
-- GitHub 仓库链接
-
-验证: 菜单栏图标 + 菜单 + 设置窗口 (含5个Tab) 能正常显示。
-```
-
-### Task 4.2 — 手势配置界面
-
-```
-创建触控板、Magic Mouse、字符识别的详细配置界面。
-
-### 1. Views/TrackpadSettingsView.swift:
-
-```swift
-struct TrackpadSettingsView: View {
-    @Bindable var settings: SettingsManager
-
-    var body: some View {
-        Form {
-            Section {
-                Toggle("Enable Trackpad Gestures", isOn: $settings.settings.trackpadEnabled)
-                Picker("Hand Mode", selection: $settings.settings.trackpadLeftHanded) {
-                    Text("Right-handed").tag(false)
-                    Text("Left-handed").tag(true)
-                }
-            }
-
-            Section("Three-Finger Gestures") {
-                GestureBindingRow(name: "Three-Finger Tap", key: "threeFingerTap",
-                                  bindings: $settings.settings.trackpadBindings)
-                GestureBindingRow(name: "Swipe Left", key: "threeFingerSwipeLeft", ...)
-                GestureBindingRow(name: "Swipe Right", key: "threeFingerSwipeRight", ...)
-                GestureBindingRow(name: "Swipe Up", key: "threeFingerSwipeUp", ...)
-                GestureBindingRow(name: "Swipe Down", key: "threeFingerSwipeDown", ...)
-            }
-
-            Section("Four-Finger Gestures") { ... }
-            Section("Combination Gestures") { ... }
-            Section("Move & Resize") { ... }
-
-            Section("App-Specific") {
-                AppSpecificBindingsEditor(bindings: $settings.settings.trackpadAppBindings)
-            }
-        }
-    }
-}
-```
-
-### 2. Views/Components/GestureBindingRow.swift:
-
-```swift
-struct GestureBindingRow: View {
-    let name: String
-    let key: String
-    @Binding var bindings: [GestureBinding]
-
-    var body: some View {
-        HStack {
-            Toggle("", isOn: enabledBinding)
-                .labelsHidden()
-            Text(name)
-            Spacer()
-            CommandPicker(selection: commandBinding)
-        }
-    }
-}
-```
-
-### 3. Views/Components/CommandPicker.swift:
-
-分类命令选择器，按 CommandCategory 分组:
-```swift
-struct CommandPicker: View {
-    @Binding var selection: CommandType
-
-    var body: some View {
-        Picker("Action", selection: $selection) {
-            ForEach(CommandCategory.allCases, id: \.self) { category in
-                Section(category.rawValue) {
-                    ForEach(CommandType.allCases.filter { $0.category == category }) { cmd in
-                        Text(cmd.displayName).tag(cmd)
-                    }
-                }
-            }
-        }
-        .frame(width: 200)
-    }
-}
-```
-
-### 4. Views/Components/KeyboardShortcutRecorder.swift:
-
-自定义快捷键录制器 (用于 keystroke 命令):
-- 点击后进入录制模式
-- 监听 NSEvent.addLocalMonitorForEvents 捕获按键
-- 显示录制的快捷键组合 (如 "⌘⇧K")
-- 使用 NSEvent 原生 API，纯 Swift
-
-### 5. Views/Components/AppSpecificBindingsEditor.swift:
-
-- 左侧: 应用列表 (NSOpenPanel 添加 .app)
-- 右侧: 该应用的手势绑定覆盖
-- 显示应用图标和名称
-
-### 6. MagicMouseSettingsView.swift 和 CharacterSettingsView.swift:
-- 结构类似 TrackpadSettingsView
-- 手势类型不同
-
-验证: 所有设置页面能正常显示和交互，修改后设置能自动保存。
-```
-
-### Task 4.3 — 辅助功能权限引导
-
-```
-创建权限检查和首次启动引导。
-
-### 1. Services/PermissionManager.swift:
-
-```swift
-@Observable
-@MainActor
-final class PermissionManager {
-    private(set) var hasAccessibilityPermission = false
-    private var checkTimer: Timer?
-
-    init() {
-        hasAccessibilityPermission = AXIsProcessTrusted()
-    }
-
-    func requestPermission() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
-        AXIsProcessTrustedWithOptions(options)
-        startPolling()
-    }
-
-    func startPolling() {
-        checkTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                let trusted = AXIsProcessTrusted()
-                if trusted != self?.hasAccessibilityPermission {
-                    self?.hasAccessibilityPermission = trusted
-                    if trusted { self?.checkTimer?.invalidate() }
-                }
-            }
-        }
-    }
-}
-```
-
-### 2. Views/OnboardingView.swift:
-
-首次启动时显示的引导窗口:
-- Step 1: 欢迎页，简要介绍 Jitouch
-- Step 2: 辅助功能权限请求
-  - 大按钮 "Grant Accessibility Permission"
-  - 权限授予后自动切换到下一步
-  - 动画显示设置步骤截图
-- Step 3: 快速配置 (选择 Trackpad / Magic Mouse)
-- Step 4: 完成，显示常用手势
-
-使用 @AppStorage("hasCompletedOnboarding") 记录是否完成过引导。
-
-### 3. Views/AccessibilityBanner.swift:
-
-设置页面顶部的权限提示横幅:
-```swift
-struct AccessibilityBanner: View {
-    @Bindable var permission: PermissionManager
-
-    var body: some View {
-        if !permission.hasAccessibilityPermission {
-            HStack {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.yellow)
-                Text("Accessibility permission required")
-                Spacer()
-                Button("Grant Access") { permission.requestPermission() }
-            }
-            .padding()
-            .background(.yellow.opacity(0.1))
-            .cornerRadius(8)
-        }
-    }
-}
-```
-
-### 4. Launch at Login (SMAppService):
-
-```swift
-import ServiceManagement
-
-func updateLaunchAtLogin(_ enabled: Bool) throws {
-    if enabled {
-        try SMAppService.mainApp.register()
-    } else {
-        try SMAppService.mainApp.unregister()
-    }
-}
-```
-
-验证: 首次运行显示引导流程，权限授予后自动检测，设置页面显示权限状态。
-```
-
----
-
-## Phase 5: 视觉反馈系统
-
-### Task 5.1 — 手势视觉反馈
-
-```
-创建手势视觉反馈 overlay，纯 Swift + SwiftUI。
-
-参考旧代码:
-- jitouch/Jitouch/CursorView.m / CursorWindow.m
-- jitouch/Jitouch/GestureView.m / GestureWindow.m
-
-### 1. Views/Overlay/OverlayPanel.swift:
-
-```swift
-final class OverlayPanel: NSPanel {
-    init() {
-        super.init(contentRect: NSScreen.main!.frame,
-                   styleMask: [.borderless, .nonactivatingPanel],
-                   backing: .buffered, defer: false)
-        isOpaque = false
-        backgroundColor = .clear
-        level = .screenSaver
-        ignoresMouseEvents = true
-        hasShadow = false
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-    }
-}
-```
-
-### 2. Views/Overlay/CursorOverlayView.swift:
-
-Move/Resize/Tab 操作时的光标反馈:
-```swift
-struct CursorOverlayView: View {
-    let cursorType: CursorType  // .move, .resize, .tab
-    let position: CGPoint
-
-    var body: some View {
-        Image(systemName: cursorType.sfSymbol)
-            .font(.system(size: 24, weight: .medium))
-            .foregroundStyle(.white)
-            .padding(8)
-            .background(.black.opacity(0.7))
-            .clipShape(Circle())
-            .position(position)
-    }
-}
-
-enum CursorType {
-    case move, resize, tab
-    var sfSymbol: String {
-        switch self {
-        case .move: return "arrow.up.and.down.and.arrow.left.and.right"
-        case .resize: return "arrow.up.left.and.arrow.down.right"
-        case .tab: return "rectangle.stack"
-        }
-    }
-}
-```
-
-### 3. Views/Overlay/GestureDrawingView.swift:
-
-字符识别时的手指轨迹绘制:
-```swift
-struct GestureDrawingView: View {
-    let points: [CGPoint]
-    let recognizedCharacter: String?
-
-    var body: some View {
-        ZStack {
-            // 半透明背景
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.ultraThinMaterial)
-                .frame(width: 200, height: 200)
-
-            // 轨迹路径
-            Canvas { context, size in
-                guard points.count >= 2 else { return }
-                var path = Path()
-                path.move(to: points[0])
-                for point in points.dropFirst() {
-                    path.addLine(to: point)
-                }
-                context.stroke(path, with: .color(.blue),
-                              style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
-            }
-            .frame(width: 180, height: 180)
-
-            // 识别结果
-            if let char = recognizedCharacter {
-                Text(char)
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .transition(.scale.combined(with: .opacity))
-            }
-        }
-    }
-}
-```
-
-### 4. Services/OverlayManager.swift:
-
-```swift
-@Observable
-@MainActor
-final class OverlayManager {
-    private var panel: OverlayPanel?
-    private(set) var cursorType: CursorType?
-    private(set) var cursorPosition: CGPoint = .zero
-    private(set) var drawingPoints: [CGPoint] = []
-    private(set) var recognizedCharacter: String?
-
-    func showCursor(_ type: CursorType, at position: CGPoint) {
-        cursorType = type
-        cursorPosition = position
-        showPanel()
-    }
-
-    func updateCursorPosition(_ position: CGPoint) {
-        cursorPosition = position
-    }
-
-    func showDrawing(points: [CGPoint]) {
-        drawingPoints = points
-        showPanel()
-    }
-
-    func showRecognizedCharacter(_ char: String) {
-        recognizedCharacter = char
-        // 1.5 秒后自动隐藏
-        Task {
-            try? await Task.sleep(for: .seconds(1.5))
-            hideAll()
-        }
-    }
-
-    func hideAll() {
-        cursorType = nil
-        drawingPoints = []
-        recognizedCharacter = nil
-        panel?.orderOut(nil)
-    }
-
-    private func showPanel() {
-        if panel == nil { panel = OverlayPanel() }
-        // 更新 panel contentView 为 NSHostingView(rootView: overlayContent)
-        panel?.orderFrontRegardless()
-    }
-}
-```
-
-验证: 手动调用 showCursor/showDrawing 能在屏幕上显示半透明覆盖。
-使用 SF Symbols 确保所有图标在 Retina 下清晰。
-```
-
----
-
-## Phase 6: 集成和收尾
-
-### Task 6.1 — 端到端集成
-
-```
-将所有模块组装并处理启动流程、错误恢复、性能优化。
-
-### 1. 启动流程 (AppState.startup):
-
-```swift
-@MainActor
-func startup() async {
-    // 1. 检查权限
-    permissionManager.startPolling()
-    guard permissionManager.hasAccessibilityPermission else {
-        // 显示 onboarding
-        return
-    }
-
-    // 2. 加载设置
-    // (SettingsManager 在 init 中已加载)
-
-    // 3. 设置手势引擎
-    gestureEngine.onGestureEvent = { [weak self] event in
-        guard let self else { return }
-        let command = self.settingsManager.command(for: event, app: currentAppBundleID())
-        Task { await self.commandExecutor.execute(command) }
-    }
-
-    // 4. 启动设备管理
-    deviceManager.start(
-        trackpadHandler: makeTrackpadCallback(),
-        mouseHandler: makeMagicMouseCallback()
-    )
-
-    // 5. 启动事件拦截
-    try? eventTapManager.start()
-    eventTapManager.onMouseEvent = { [weak self] event, type in
-        self?.gestureEngine.handleMouseEvent(event, type: type)
-    }
-
-    // 6. 监听系统事件
-    setupSystemNotifications()
-}
-```
-
-### 2. C 回调到 Swift 的桥接:
-
-```swift
-/// 全局 C 回调函数 → 调用 GestureEngine
-private func makeTrackpadCallback() -> MTContactCallbackFunction {
-    return { device, data, nFingers, timestamp, frame in
-        guard let data else { return 0 }
-        let touches = (0..<nFingers).map { TouchPoint(finger: data[$0]) }
-        let frame = TouchFrame(touches: touches, timestamp: timestamp, deviceType: .trackpad)
-        // 通过全局 AppState 引用回调
-        Task { @MainActor in
-            AppState.shared.gestureEngine.handleTouchFrame(frame)
-        }
-        return 0
-    }
-}
-```
-
-### 3. 错误恢复:
-- EventTap 超时: tapDisabledByTimeout → 自动重启 (已在 EventTapManager 中实现)
-- 设备断开: IOKit 通知 → DeviceManager 自动清理和重连
-- 权限撤销: PermissionManager 轮询检测 → 停止引擎 + 显示提示
-- 系统唤醒: didWakeNotification → 重新初始化设备
-
-### 4. 日志:
-```swift
-import os
-
-extension Logger {
-    static let gesture = Logger(subsystem: "com.jitouch.Jitouch", category: "Gesture")
-    static let device = Logger(subsystem: "com.jitouch.Jitouch", category: "Device")
-    static let eventTap = Logger(subsystem: "com.jitouch.Jitouch", category: "EventTap")
-    static let command = Logger(subsystem: "com.jitouch.Jitouch", category: "Command")
-}
-```
-
-### 5. 性能:
-- 触摸回调: 直接在回调线程处理手势状态机，仅在需要 UI 更新时 dispatch 到主线程
-- 避免在热路径中使用 String 拼接或 Array append
-- 使用 signpost 标记关键路径耗时
-
-### 6. SIGHUP 重载:
-```swift
-func setupSignalHandler() {
-    let source = DispatchSource.makeSignalSource(signal: SIGHUP, queue: .main)
-    source.setEventHandler { [weak self] in
-        Logger.gesture.info("Received SIGHUP, reloading...")
-        Task { @MainActor in
-            self?.shutdown()
-            await self?.startup()
-        }
-    }
-    source.resume()
-    signal(SIGHUP, SIG_IGN)
-}
-```
-
-验证: 完整启动→识别手势→执行命令 的端到端流程。
-```
-
-### Task 6.2 — 清理和收尾
-
-```
-完成所有功能移植后执行最终清理。
-
-### 1. 删除旧 ObjC 代码:
-   rm -rf jitouch/
-
-### 2. 更新 README.md:
-
-# Jitouch
-
-Magic Trackpad and Magic Mouse gesture enhancer for macOS.
-
-## Features
-- Custom multi-touch gestures for Trackpad and Magic Mouse
-- Three/four finger taps, swipes, pinches
-- Character recognition (draw letters to trigger actions)
-- Window move, resize, and snap
-- Per-application gesture customization
-- Native SwiftUI settings interface
-
-## Requirements
-- macOS 15.0 or later
-- Accessibility permission required
-
-## Installation
-Download the latest release from GitHub Releases.
-
-## Building
-- Xcode 16+
-- Swift 6
-- `xcodebuild -project Jitouch.xcodeproj -scheme Jitouch build`
-
-## License
-GPL v3 — see [LICENSE](LICENSE)
-
-## Credits
-Originally created by Supasorn Suwajanakorn and Sukolsak Sakshuwong.
-Maintained by Aaron Kollasch. Modernized Swift rewrite by lusheng.
-
-### 3. 创建 CHANGELOG.md:
-
-## [3.0.0] — 2026-xx-xx
-### Changed
-- Complete rewrite in pure Swift (from Objective-C)
-- New SwiftUI settings interface (replaces System Preferences pane)
-- Standalone menu bar app (no more prefPane installation)
-- Retina display support with SF Symbols
-- Minimum macOS 15.0 (supports up to macOS 26 Tahoe)
-- Modern Swift concurrency (async/await, @Observable)
-- Launch at Login via SMAppService
-
-### Added
-- Window snapping (left/right/top/bottom half)
-- Notification Center gesture
-- First-run onboarding with accessibility permission guide
-
-### Removed
-- System Preferences pane (replaced by standalone app)
-- Legacy macOS support (< 15.0)
-
-### 4. 更新 .gitignore (如需要)
-
-### 5. 全面测试:
-- [ ] macOS 15 测试
-- [ ] macOS 26 (Tahoe) 测试
-- [ ] Trackpad: 三指/四指 点击和滑动
-- [ ] Trackpad: 组合手势 (固定指+操作指)
-- [ ] Trackpad: Move/Resize
-- [ ] Trackpad: 字符识别
-- [ ] Magic Mouse: 所有手势
-- [ ] 设备热插拔
-- [ ] 权限授予/撤销流程
-- [ ] 设置保存/恢复
-- [ ] 旧版设置迁移
-- [ ] Launch at Login
-- [ ] 系统唤醒恢复
-- [ ] 视觉反馈 overlay
-- [ ] 多显示器
-```
-
----
-
-## 执行顺序和依赖关系
-
-```
-1.1 项目结构 → 1.2 C 头文件 → 2.1 触摸模型 → 2.2 设备管理 → 2.3 手势引擎 → 2.4 事件拦截
-                                                                        ↓
-                                    3.2 设置管理 ← 3.1 命令执行器 ←──────┘
-                                         ↓
-                           4.1 菜单栏框架 → 4.2 配置界面 → 4.3 权限引导
-                                                              ↓
-                                                   5.1 视觉反馈 → 6.1 集成 → 6.2 收尾
-```
-
-每个 Task 完成后必须验证编译通过。建议 Task 2.3 (手势引擎) 按手势类型逐个迭代:
-先实现三指滑动/点击 → 四指手势 → 组合手势 → Move/Resize → 字符识别。
+### 旧文件到新模块映射（参考）
+
+| 旧文件 | 新模块 | 状态 |
+|--------|--------|------|
+| `Gesture.m` (4,304 行) | DeviceManager + EventTapManager + GestureEngine + Recognizers/* | 🟡 主体已迁移，仍有 parity 收尾 |
+| `Settings.m` | AppSettings + CommandModels + LegacySettingsStore | ✅ 已迁移 |
+| `JitouchAppDelegate.m` | JitouchAppModel + MenuBarContentView | 🟡 主体已迁移，仍需持续收敛生命周期职责 |
+| `KeyUtility.m` | CommandExecutor + KeyboardSimulationService | 🟡 主体已迁移，命令分类仍待拆分 |
+| `CursorWindow.m` / `GestureWindow.m` | Overlay controllers | ✅ 已迁移 |
+| `SystemEvents.h` / `SystemPreferences.h` | 未直接迁入，默认不再依赖 ScriptingBridge | ✅ 设计决策 |
