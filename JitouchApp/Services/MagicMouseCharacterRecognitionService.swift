@@ -84,6 +84,13 @@ final class MagicMouseCharacterRecognitionService {
     }
 }
 
+func magicMouseOverlayRelativePoint(startScreenPoint: CGPoint, currentScreenPoint: CGPoint) -> CGPoint {
+    CGPoint(
+        x: currentScreenPoint.x - startScreenPoint.x,
+        y: startScreenPoint.y - currentScreenPoint.y
+    )
+}
+
 private enum MagicMouseCharacterRecognitionButton: Int {
     case middle = 0
     case right = 1
@@ -287,9 +294,9 @@ private func jitouchMagicMouseCharacterRecognitionEventHandler(_ event: CGEvent,
         let hint = magicMouseCharacterRecognitionState.session?.resolveHint()
         magicMouseCharacterRecognitionLock.unlock()
         if let session {
-            let relativePoint = CGPoint(
-                x: location.x - session.startScreenPoint.x,
-                y: location.y - session.startScreenPoint.y
+            let relativePoint = magicMouseOverlayRelativePoint(
+                startScreenPoint: session.startScreenPoint,
+                currentScreenPoint: location
             )
             Task { @MainActor in
                 activeMagicMouseCharacterRecognitionService?.updateOverlay(

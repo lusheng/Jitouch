@@ -50,6 +50,7 @@
 		A987BA219B679C5A78BF488A /* CommandModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 699024737AFA1117DFB7A230 /* CommandModels.swift */; };
 		ABEC57FAD763B74FCBC3B359 /* EventTapManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD9A734BDD56D1680EFB84C9 /* EventTapManager.swift */; };
 		AF2D1173DF1AD6EFEADC4DCF /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 307BB5527F927A9892D4992E /* SettingsWindowController.swift */; };
+		BB54ACCCE42CF77D0BEAAE95 /* MagicMouseCharacterRecognitionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2032CB94F8D07CFC43CAA15A /* MagicMouseCharacterRecognitionServiceTests.swift */; };
 		BFD45DE45086877148D7B7F4 /* SettingsRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8A3DD7ED92A4383D585FE67 /* SettingsRootView.swift */; };
 		C00ADB7A592DB61F25560956 /* CommandFeedbackOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF42E69F84585557DAA8EBA /* CommandFeedbackOverlayController.swift */; };
 		CB24DF2306AF6F85E6F10443 /* TrackpadSwipeRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8852E51C8C98843B8A9EF817 /* TrackpadSwipeRecognizer.swift */; };
@@ -91,6 +92,7 @@
 		19EBF51F85A18CF9C96F59B5 /* TouchFrameFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchFrameFactory.swift; sourceTree = "<group>"; };
 		1B838A5C5BF2C0FD68C5D87D /* TrackpadTabSwitchRecognizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadTabSwitchRecognizerTests.swift; sourceTree = "<group>"; };
 		1E67644D01945EB0B86A1F8C /* SettingsPageScaffold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPageScaffold.swift; sourceTree = "<group>"; };
+		2032CB94F8D07CFC43CAA15A /* MagicMouseCharacterRecognitionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagicMouseCharacterRecognitionServiceTests.swift; sourceTree = "<group>"; };
 		2358F018B182D53C0F93E716 /* LegacySettingsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacySettingsStoreTests.swift; sourceTree = "<group>"; };
 		237DE69D5A179455B61D03DF /* TrackpadTapRecognizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadTapRecognizerTests.swift; sourceTree = "<group>"; };
 		2879F694DD48BCE7060FB87C /* AccessibilityPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPermissionService.swift; sourceTree = "<group>"; };
@@ -230,6 +232,7 @@
 			children = (
 				15FB966F8A7CD0DF8EB8250A /* JitouchAppModelRuleEditingTests.swift */,
 				2358F018B182D53C0F93E716 /* LegacySettingsStoreTests.swift */,
+				2032CB94F8D07CFC43CAA15A /* MagicMouseCharacterRecognitionServiceTests.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -398,6 +401,7 @@
 				EC40E5E1C9A91B9CD8F29D53 /* CharacterRecognitionEngineTests.swift in Sources */,
 				4F57EF642C156ABAC3F8C744 /* JitouchAppModelRuleEditingTests.swift in Sources */,
 				1C52116FD208A8832752CF31 /* LegacySettingsStoreTests.swift in Sources */,
+				BB54ACCCE42CF77D0BEAAE95 /* MagicMouseCharacterRecognitionServiceTests.swift in Sources */,
 				9BBC21F8DEDDAA459615B604 /* MagicMouseRecognizerTests.swift in Sources */,
 				EF8FAE3D8CAE4CDCDE248404 /* TouchFrameFactory.swift in Sources */,
 				6EC707B91B1C0739E9236853 /* TrackpadFixFingerRecognizerTests.swift in Sources */,
