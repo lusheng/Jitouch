@@ -60,7 +60,7 @@ struct DeviceSettingsTab<
         ) {
             Toggle("Enable \(device.title) Profiles", isOn: $isProfilesEnabled)
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
+            SettingsMetricsGrid {
                 JitouchMetricTile(
                     title: "Mappings",
                     value: "\(mappingCount)",

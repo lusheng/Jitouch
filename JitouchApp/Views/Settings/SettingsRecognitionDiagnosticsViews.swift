@@ -75,8 +75,7 @@ struct SettingsCharacterRecognitionCalibrationCard: View {
                 if let snapshot = diagnostics.liveSnapshot {
                     SettingsLiveRecognitionSnapshotView(snapshot: snapshot)
                 } else {
-                    Text("No live character-recognition snapshot yet.")
-                        .foregroundStyle(.secondary)
+                    SettingsSecondaryPlaceholderText(text: "No live character-recognition snapshot yet.")
                 }
 
                 if !diagnostics.recentSnapshots.isEmpty {

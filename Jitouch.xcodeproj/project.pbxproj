@@ -10,6 +10,7 @@
 		00E8520AA5A4BDCDEEEACC6E /* CharacterRecognitionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A98924FCF2ACC4A3C53F7B9E /* CharacterRecognitionEngine.swift */; };
 		02477873A65AB34B44C427BC /* TrackpadTabSwitchRecognizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B838A5C5BF2C0FD68C5D87D /* TrackpadTabSwitchRecognizerTests.swift */; };
 		0668AF204C84AEBFCC6AF9E7 /* KeyboardSimulationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FC6E67190B581D9CE1BAFE /* KeyboardSimulationService.swift */; };
+		0ACE5BA7B5549460CB6F22D7 /* SettingsSharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4983387E435F3259A092DD61 /* SettingsSharedComponents.swift */; };
 		0EA656BB4785053CED683192 /* TouchModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 820EE8490CA6A0A6410CD9F1 /* TouchModels.swift */; };
 		128FF61EA82550D439F7BFC2 /* MenuBarContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DD8EDB6D3DAFC258C4B60F6 /* MenuBarContentView.swift */; };
 		1B0A45345094EEE241CFFB90 /* TrackpadFixFingerRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD17B58C57E3008293B499D0 /* TrackpadFixFingerRecognizer.swift */; };
@@ -98,6 +99,7 @@
 		307BB5527F927A9892D4992E /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		3159951C1D10FD8C69B03532 /* TrackpadPinchRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadPinchRecognizer.swift; sourceTree = "<group>"; };
 		48A79EAF1F53A7D325A17301 /* SettingsNavigationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsNavigationModels.swift; sourceTree = "<group>"; };
+		4983387E435F3259A092DD61 /* SettingsSharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSharedComponents.swift; sourceTree = "<group>"; };
 		510CFD51D0FC0BA4D946BFAB /* CharacterRecognitionDiagnosticsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterRecognitionDiagnosticsStore.swift; sourceTree = "<group>"; };
 		5BB61515D298E21EE39DE362 /* SettingsGestureEditorViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsGestureEditorViews.swift; sourceTree = "<group>"; };
 		5DD8EDB6D3DAFC258C4B60F6 /* MenuBarContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContentView.swift; sourceTree = "<group>"; };
@@ -176,6 +178,7 @@
 				5BB61515D298E21EE39DE362 /* SettingsGestureEditorViews.swift */,
 				1E67644D01945EB0B86A1F8C /* SettingsPageScaffold.swift */,
 				DA4525267B7B120B6BC668A4 /* SettingsRecognitionDiagnosticsViews.swift */,
+				4983387E435F3259A092DD61 /* SettingsSharedComponents.swift */,
 				C6AC7BD4CE7B68C6D7F632A2 /* SettingsSidebarView.swift */,
 			);
 			path = Settings;
@@ -443,6 +446,7 @@
 				9DD572B331C98F45F05689EA /* SettingsPageScaffold.swift in Sources */,
 				A4C6B0D3D60A843AC844C6D8 /* SettingsRecognitionDiagnosticsViews.swift in Sources */,
 				BFD45DE45086877148D7B7F4 /* SettingsRootView.swift in Sources */,
+				0ACE5BA7B5549460CB6F22D7 /* SettingsSharedComponents.swift in Sources */,
 				973EDCF2452547994AE81B4C /* SettingsSidebarView.swift in Sources */,
 				AF2D1173DF1AD6EFEADC4DCF /* SettingsWindowController.swift in Sources */,
 				E57D613C28B7700C72395F77 /* ShortcutRecorderField.swift in Sources */,

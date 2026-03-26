@@ -63,7 +63,7 @@ struct RecognitionSettingsTab<
             symbol: "signature",
             tint: .purple
         ) {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
+            SettingsMetricsGrid {
                 JitouchMetricTile(
                     title: "Trackpad Recognition",
                     value: trackpadCharacterRecognitionEnabled ? "Enabled" : "Disabled",

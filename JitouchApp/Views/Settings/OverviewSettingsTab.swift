@@ -71,7 +71,7 @@ struct OverviewSettingsTab: View {
             symbol: menuBarSymbolName,
             tint: isEnabled ? .green : .orange,
             accessory: {
-                JitouchStatusBadge(
+                SettingsCardStatusBadge(
                     title: isEnabled ? "Active" : "Paused",
                     tint: isEnabled ? .green : .orange
                 )
@@ -106,7 +106,7 @@ struct OverviewSettingsTab: View {
             symbol: "figure.walk.motion",
             tint: hasCompletedOnboarding ? .blue : .green,
             accessory: {
-                JitouchStatusBadge(
+                SettingsCardStatusBadge(
                     title: onboardingProgressSummary,
                     tint: onboardingCoreRequirementsMet ? .green : .orange
                 )
@@ -125,7 +125,7 @@ struct OverviewSettingsTab: View {
     }
 
     private var overviewMetrics: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 14)], spacing: 14) {
+        SettingsMetricsGrid(minimumWidth: 180, spacing: 14) {
             JitouchMetricTile(
                 title: "Accessibility",
                 value: accessibilityStatusText,

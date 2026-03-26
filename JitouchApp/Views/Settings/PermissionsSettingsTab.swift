@@ -27,7 +27,7 @@ struct PermissionsSettingsTab: View {
             symbol: "lock.shield",
             tint: accessibilityGranted ? .green : .orange,
             accessory: {
-                JitouchStatusBadge(
+                SettingsCardStatusBadge(
                     title: accessibilityStatusText,
                     tint: accessibilityGranted ? .green : .orange
                 )
@@ -59,7 +59,7 @@ struct PermissionsSettingsTab: View {
             symbol: "power.circle",
             tint: .teal,
             accessory: {
-                JitouchStatusBadge(
+                SettingsCardStatusBadge(
                     title: launchAtLoginStatus.title,
                     tint: launchAtLoginStatus.isEnabled ? .green : .secondary
                 )

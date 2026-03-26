@@ -64,7 +64,7 @@ struct DiagnosticsSettingsTab<CalibrationContent: View>: View {
             symbol: "stethoscope",
             tint: .pink
         ) {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
+            SettingsMetricsGrid {
                 JitouchMetricTile(
                     title: "Event Tap",
                     value: eventTapStatusText,
@@ -169,8 +169,7 @@ private struct DiagnosticsDeviceSection: View {
                 .font(.subheadline.weight(.semibold))
 
             if devices.isEmpty {
-                Text("No devices detected.")
-                    .foregroundStyle(.secondary)
+                SettingsSecondaryPlaceholderText(text: "No devices detected.")
             } else {
                 ForEach(devices) { device in
                     HStack {

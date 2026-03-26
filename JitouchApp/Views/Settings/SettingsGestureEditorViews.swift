@@ -107,10 +107,10 @@ struct SettingsGestureEditingSection<GestureEditorContent: View>: View {
                             gestureEditor(gesture)
                         }
                     } else if activeGestures.isEmpty && isFiltering {
-                        ContentUnavailableView(
-                            "No Matching Gestures",
+                        SettingsEmptyStateView(
+                            title: "No Matching Gestures",
                             systemImage: "magnifyingglass",
-                            description: Text("Try another search term or clear the filter.")
+                            description: "Try another search term or clear the filter."
                         )
                     }
                 } else {

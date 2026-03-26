@@ -81,13 +81,12 @@ struct SettingsProfileSelectionCard: View {
             symbol: device == .recognition ? "text.badge.star" : "square.on.square",
             tint: device == .recognition ? .purple : .blue,
             accessory: {
-                JitouchStatusBadge(title: "\(sets.count) profile\(sets.count == 1 ? "" : "s")", tint: .secondary)
+                SettingsCountBadge(count: sets.count, singularLabel: "profile")
             }
         ) {
             VStack(alignment: .leading, spacing: 14) {
                 if sets.isEmpty {
-                    Text("No profiles available yet.")
-                        .foregroundStyle(.secondary)
+                    SettingsSecondaryPlaceholderText(text: "No profiles available yet.")
                 } else {
                     Picker("Editing Profile", selection: $selectedSetID) {
                         ForEach(sets) { set in
@@ -141,7 +140,7 @@ struct SettingsOverrideManagerCard: View {
             symbol: "app.badge",
             tint: .teal,
             accessory: {
-                JitouchStatusBadge(title: "\(overrides.count) override\(overrides.count == 1 ? "" : "s")", tint: .secondary)
+                SettingsCountBadge(count: overrides.count, singularLabel: "override")
             }
         ) {
             VStack(alignment: .leading, spacing: 14) {
@@ -151,10 +150,10 @@ struct SettingsOverrideManagerCard: View {
                 }
 
                 if overrides.isEmpty {
-                    ContentUnavailableView(
-                        "No App Overrides Yet",
+                    SettingsEmptyStateView(
+                        title: "No App Overrides Yet",
                         systemImage: "square.on.square.dashed",
-                        description: Text("Create one to give a specific app its own gesture behavior without changing your default profile.")
+                        description: "Create one to give a specific app its own gesture behavior without changing your default profile."
                     )
                 } else {
                     VStack(alignment: .leading, spacing: 10) {
