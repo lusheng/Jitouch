@@ -43,6 +43,7 @@
 		9DD572B331C98F45F05689EA /* SettingsPageScaffold.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E67644D01945EB0B86A1F8C /* SettingsPageScaffold.swift */; };
 		A2E4548BEC4EFA4D4B109410 /* TrackpadMoveResizeRecognizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E7F9851CEF7354C29C20C44 /* TrackpadMoveResizeRecognizerTests.swift */; };
 		A4C400DB90A17C3C27A39AA4 /* CommandExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D92D27573BB3660084D73E07 /* CommandExecutor.swift */; };
+		A4C6B0D3D60A843AC844C6D8 /* SettingsRecognitionDiagnosticsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA4525267B7B120B6BC668A4 /* SettingsRecognitionDiagnosticsViews.swift */; };
 		A987BA219B679C5A78BF488A /* CommandModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 699024737AFA1117DFB7A230 /* CommandModels.swift */; };
 		ABEC57FAD763B74FCBC3B359 /* EventTapManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD9A734BDD56D1680EFB84C9 /* EventTapManager.swift */; };
 		AF2D1173DF1AD6EFEADC4DCF /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 307BB5527F927A9892D4992E /* SettingsWindowController.swift */; };
@@ -54,6 +55,7 @@
 		D266EEA38CC3D75FD59C67AE /* JitouchChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE52F7B6AA83E18D2962DCC7 /* JitouchChrome.swift */; };
 		D32EBB628B59E2CD5EC05B15 /* JitouchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFF564E52A9083C2B870724B /* JitouchApp.swift */; };
 		DA90F8AF7FA813E3802A4DFF /* DeviceSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43213ED1AB88B34171DB0D6 /* DeviceSettingsTab.swift */; };
+		DC779393727EB0845BA75667 /* SettingsGestureEditorViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BB61515D298E21EE39DE362 /* SettingsGestureEditorViews.swift */; };
 		DF23CF902B625F831A7548FA /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94F02468712B3FA6FB8DBA33 /* AppSettings.swift */; };
 		DFD831379C0978927592FC62 /* MagicMouseRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67F97A66A466E1B2C6D046C9 /* MagicMouseRecognizer.swift */; };
 		E4207FFE03D8D187D72C85FD /* TrackpadTabSwitchRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09145296A5CBF5F3FA519152 /* TrackpadTabSwitchRecognizer.swift */; };
@@ -97,6 +99,7 @@
 		3159951C1D10FD8C69B03532 /* TrackpadPinchRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadPinchRecognizer.swift; sourceTree = "<group>"; };
 		48A79EAF1F53A7D325A17301 /* SettingsNavigationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsNavigationModels.swift; sourceTree = "<group>"; };
 		510CFD51D0FC0BA4D946BFAB /* CharacterRecognitionDiagnosticsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterRecognitionDiagnosticsStore.swift; sourceTree = "<group>"; };
+		5BB61515D298E21EE39DE362 /* SettingsGestureEditorViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsGestureEditorViews.swift; sourceTree = "<group>"; };
 		5DD8EDB6D3DAFC258C4B60F6 /* MenuBarContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContentView.swift; sourceTree = "<group>"; };
 		5E7F9851CEF7354C29C20C44 /* TrackpadMoveResizeRecognizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadMoveResizeRecognizerTests.swift; sourceTree = "<group>"; };
 		5FF53B21A89EF71D6A2B1E1D /* JitouchAppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JitouchAppModel.swift; sourceTree = "<group>"; };
@@ -131,6 +134,7 @@
 		D6422C80A0E83380A54BB63F /* TrackpadTapRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadTapRecognizer.swift; sourceTree = "<group>"; };
 		D8A3DD7ED92A4383D585FE67 /* SettingsRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsRootView.swift; sourceTree = "<group>"; };
 		D92D27573BB3660084D73E07 /* CommandExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandExecutor.swift; sourceTree = "<group>"; };
+		DA4525267B7B120B6BC668A4 /* SettingsRecognitionDiagnosticsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsRecognitionDiagnosticsViews.swift; sourceTree = "<group>"; };
 		E646FDE4D5290154D9AA798E /* JitouchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JitouchTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EC9D53C0AEBC4872238A921A /* TrackpadPinchRecognizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadPinchRecognizerTests.swift; sourceTree = "<group>"; };
 		EFE2D5870F27EB284B8146B2 /* TrackpadMoveResizeRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadMoveResizeRecognizer.swift; sourceTree = "<group>"; };
@@ -169,7 +173,9 @@
 				2FA5B242056822FE5AD7215E /* PermissionsSettingsTab.swift */,
 				657BAE448E93DD0535142472 /* RecognitionSettingsTab.swift */,
 				7EB8582687E88A403B666624 /* SettingsCommandProfileViews.swift */,
+				5BB61515D298E21EE39DE362 /* SettingsGestureEditorViews.swift */,
 				1E67644D01945EB0B86A1F8C /* SettingsPageScaffold.swift */,
+				DA4525267B7B120B6BC668A4 /* SettingsRecognitionDiagnosticsViews.swift */,
 				C6AC7BD4CE7B68C6D7F632A2 /* SettingsSidebarView.swift */,
 			);
 			path = Settings;
@@ -432,8 +438,10 @@
 				CA940FC3DACF54E1B2F8D898 /* PermissionsSettingsTab.swift in Sources */,
 				FFD4B8E7DC67A4908AA268D8 /* RecognitionSettingsTab.swift in Sources */,
 				538E2AF7A2A9EF68394E9AE7 /* SettingsCommandProfileViews.swift in Sources */,
+				DC779393727EB0845BA75667 /* SettingsGestureEditorViews.swift in Sources */,
 				F4DA2AEDF77E1177C0AE790F /* SettingsNavigationModels.swift in Sources */,
 				9DD572B331C98F45F05689EA /* SettingsPageScaffold.swift in Sources */,
+				A4C6B0D3D60A843AC844C6D8 /* SettingsRecognitionDiagnosticsViews.swift in Sources */,
 				BFD45DE45086877148D7B7F4 /* SettingsRootView.swift in Sources */,
 				973EDCF2452547994AE81B4C /* SettingsSidebarView.swift in Sources */,
 				AF2D1173DF1AD6EFEADC4DCF /* SettingsWindowController.swift in Sources */,
