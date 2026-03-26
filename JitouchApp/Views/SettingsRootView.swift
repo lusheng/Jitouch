@@ -257,11 +257,11 @@ struct SettingsRootView: View {
                 hasLiveDiagnosticsSnapshot: appModel.characterRecognitionDiagnostics.liveSnapshot != nil,
                 characterRecognitionDiagnosticsEnabled: characterRecognitionDiagnosticsEnabledBinding
             ) {
-                profileSelectionCard(for: .recognition)
+                profileSelectionSection(for: .recognition)
             } gestureSearch: {
-                gestureSearchCard(for: .recognition)
+                gestureSearchSection(for: .recognition)
             } gestureEditor: {
-                gestureEditorSection(for: .recognition)
+                gestureEditingSection(for: .recognition)
             }
         case .diagnostics:
             DiagnosticsSettingsTab(
@@ -343,13 +343,13 @@ struct SettingsRootView: View {
             connectedDeviceCount: connectedDeviceCount,
             isProfilesEnabled: isProfilesEnabled
         ) {
-            profileSelectionCard(for: device)
+            profileSelectionSection(for: device)
         } overrideManager: {
-            overrideManagerCard(for: device)
+            overrideManagerSection(for: device)
         } gestureSearch: {
-            gestureSearchCard(for: device)
+            gestureSearchSection(for: device)
         } gestureEditor: {
-            gestureEditorSection(for: device)
+            gestureEditingSection(for: device)
         }
     }
 
@@ -366,31 +366,20 @@ struct SettingsRootView: View {
         )
     }
 
-    private func profileSelectionCard(for device: CommandDevice) -> some View {
-        let sets = appModel.commandSets(for: device)
-        return SettingsProfileSelectionCard(
+    private func profileSelectionSection(for device: CommandDevice) -> some View {
+        SettingsProfileSelectionSection(
             device: device,
-            sets: sets,
-            selectedSet: selectedCommandSet(for: device),
-            selectedSetID: selectedSetIDBinding(for: device),
-            profileTitle: { set in
-                set.path.isEmpty ? set.application : "\(set.application) Override"
-            },
-            profileDescription: { set in
-                set.path.isEmpty
-                    ? "Changes here apply when no app-specific override matches."
-                    : set.path
-            }
+            sets: appModel.commandSets(for: device),
+            selectedSetID: selectedSetIDBinding(for: device)
         )
     }
 
-    private func overrideManagerCard(for device: CommandDevice) -> some View {
-        let overrides = applicationOverrides(for: device)
+    private func overrideManagerSection(for device: CommandDevice) -> some View {
         let sets = appModel.commandSets(for: device)
 
-        return SettingsOverrideManagerCard(
+        return SettingsOverrideManagerSection(
             device: device,
-            overrides: overrides,
+            commandSets: sets,
             currentSelectedSetID: currentSelectedSetID(for: device),
             differenceCount: { set in
                 overrideDifferenceCount(for: set, device: device)
@@ -418,116 +407,54 @@ struct SettingsRootView: View {
         )
     }
 
-    private func gestureEditorSection(for device: CommandDevice) -> some View {
+    private func gestureEditingSection(for device: CommandDevice) -> some View {
         let selectedSet = selectedCommandSet(for: device)
+        let overrideCount = applicationOverrides(for: device).count
+        let searchText = currentSearchText(for: device)
+        let activeGestures = selectedSet.map { activeGestureNames(for: device, setID: $0.id) } ?? []
+        let inactiveGestures = selectedSet.map { inactiveGestureNames(for: device, setID: $0.id) } ?? []
+        let differenceCount = selectedSet.map { overrideDifferenceCount(for: $0, device: device) } ?? 0
 
-        return JitouchSurfaceCard(
-            title: "Gesture Mappings",
-            subtitle: "Enable only the gestures you care about, then assign actions, shortcuts, URLs, or file launches.",
-            symbol: "wand.and.stars",
-            tint: .indigo
-        ) {
-            VStack(alignment: .leading, spacing: 14) {
-                if let selectedSet {
-                    SettingsProfileEditingContextView(
-                        device: device,
-                        set: selectedSet,
-                        enabledCount: selectedSet.gestures.filter(\.isEnabled).count,
-                        overrideCount: applicationOverrides(for: device).count,
-                        differenceCount: overrideDifferenceCount(for: selectedSet, device: device),
-                        onBackToDefault: {
-                            setSelectedSetID("All Applications", for: device)
-                        },
-                        onResetToDefault: {
-                            appModel.resetApplicationOverrideToDefault(for: device, setID: selectedSet.id)
-                        },
-                        onOpenApp: {
-                            openOverrideApplication(selectedSet.path)
-                        },
-                        onReveal: {
-                            revealFilePath(selectedSet.path)
-                        },
-                        onRemoveOverride: {
-                            appModel.removeApplicationOverride(for: device, setID: selectedSet.id)
-                        }
-                    )
-
-                    let searchText = currentSearchText(for: device)
-                    let activeGestures = activeGestureNames(for: device, setID: selectedSet.id)
-                    let inactiveGestures = inactiveGestureNames(for: device, setID: selectedSet.id)
-                    let isFiltering = !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-
-                    if isFiltering {
-                        Text("Showing \(activeGestures.count + inactiveGestures.count) matching gestures for “\(searchText)”")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    if activeGestures.isEmpty && !isFiltering {
-                        Text("No enabled mappings in this profile yet. Open the list below and turn on the gestures you want.")
-                            .foregroundStyle(.secondary)
-                    } else if !activeGestures.isEmpty {
-                        Text(isFiltering ? "Matching Enabled Gestures" : "Enabled")
-                            .font(.headline)
-
-                        ForEach(activeGestures, id: \.self) { gesture in
-                            gestureEditor(for: device, setID: selectedSet.id, gesture: gesture)
-                        }
-                    }
-
-                    if !inactiveGestures.isEmpty && !isFiltering {
-                        Divider()
-
-                        DisclosureGroup("More Gestures (\(inactiveGestures.count))") {
-                            VStack(alignment: .leading, spacing: 12) {
-                                ForEach(inactiveGestures, id: \.self) { gesture in
-                                    gestureEditor(for: device, setID: selectedSet.id, gesture: gesture)
-                                }
-                            }
-                            .padding(.top, 10)
-                        }
-                    } else if !inactiveGestures.isEmpty {
-                        Divider()
-
-                        Text("Matching Disabled Gestures")
-                            .font(.headline)
-
-                        ForEach(inactiveGestures, id: \.self) { gesture in
-                            gestureEditor(for: device, setID: selectedSet.id, gesture: gesture)
-                        }
-                    } else if activeGestures.isEmpty && isFiltering {
-                        ContentUnavailableView(
-                            "No Matching Gestures",
-                            systemImage: "magnifyingglass",
-                            description: Text("Try another search term or clear the filter.")
-                        )
-                    }
-                } else {
-                    Text("Pick a profile to start editing gesture bindings.")
-                        .foregroundStyle(.secondary)
-                }
+        return SettingsGestureEditingSection(
+            device: device,
+            selectedSet: selectedSet,
+            overrideCount: overrideCount,
+            differenceCount: differenceCount,
+            searchText: searchText,
+            activeGestures: activeGestures,
+            inactiveGestures: inactiveGestures,
+            onBackToDefault: {
+                setSelectedSetID(defaultSetID(for: device), for: device)
+            },
+            onResetToDefault: {
+                guard let selectedSet else { return }
+                appModel.resetApplicationOverrideToDefault(for: device, setID: selectedSet.id)
+            },
+            onOpenApp: {
+                guard let selectedSet else { return }
+                openOverrideApplication(selectedSet.path)
+            },
+            onReveal: {
+                guard let selectedSet else { return }
+                revealFilePath(selectedSet.path)
+            },
+            onRemoveOverride: {
+                guard let selectedSet else { return }
+                appModel.removeApplicationOverride(for: device, setID: selectedSet.id)
             }
+        ) { gesture in
+            let setID = selectedSet?.id ?? defaultSetID(for: device)
+            SettingsGestureEditorCard(
+                device: device,
+                gesture: gesture,
+                command: gestureCommandBinding(for: device, setID: setID, gesture: gesture),
+                onRevealFilePath: revealFilePath
+            )
         }
     }
 
-    private func gestureEditor(
-        for device: CommandDevice,
-        setID: String,
-        gesture: String
-    ) -> SettingsGestureEditorCard {
-        SettingsGestureEditorCard(
-            device: device,
-            gesture: gesture,
-            command: gestureCommandBinding(for: device, setID: setID, gesture: gesture),
-            onRevealFilePath: revealFilePath
-        )
-    }
-
-    private func gestureSearchCard(for device: CommandDevice) -> some View {
-        SettingsGestureSearchCard(
-            device: device,
-            searchText: searchTextBinding(for: device)
-        )
+    private func gestureSearchSection(for device: CommandDevice) -> some View {
+        SettingsGestureSearchCard(device: device, searchText: searchTextBinding(for: device))
     }
 
     private func applicationOverrides(for device: CommandDevice) -> [ApplicationCommandSet] {
@@ -543,7 +470,7 @@ struct SettingsRootView: View {
         device: CommandDevice
     ) -> Int {
         guard !set.path.isEmpty else { return 0 }
-        let defaultSetID = defaultCommandSet(for: device)?.id ?? "All Applications"
+        let defaultSetID = defaultSetID(for: device)
 
         return CommandCatalog.editableGestures(for: device).reduce(into: 0) { count, gesture in
             let overrideCommand = appModel.gestureCommand(for: device, setID: set.id, gesture: gesture)
@@ -556,6 +483,10 @@ struct SettingsRootView: View {
 
     private func defaultCommandSet(for device: CommandDevice) -> ApplicationCommandSet? {
         appModel.commandSets(for: device).first(where: { $0.path.isEmpty })
+    }
+
+    private func defaultSetID(for device: CommandDevice) -> String {
+        defaultCommandSet(for: device)?.id ?? "All Applications"
     }
 
     private func selectedCommandSet(for device: CommandDevice) -> ApplicationCommandSet? {

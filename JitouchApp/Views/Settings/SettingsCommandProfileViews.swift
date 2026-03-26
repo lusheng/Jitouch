@@ -1,6 +1,69 @@
 import AppKit
 import SwiftUI
 
+struct SettingsProfileSelectionSection: View {
+    let device: CommandDevice
+    let sets: [ApplicationCommandSet]
+    @Binding var selectedSetID: String
+
+    var body: some View {
+        SettingsProfileSelectionCard(
+            device: device,
+            sets: sets,
+            selectedSet: selectedSet,
+            selectedSetID: $selectedSetID,
+            profileTitle: { set in
+                set.path.isEmpty ? set.application : "\(set.application) Override"
+            },
+            profileDescription: { set in
+                set.path.isEmpty
+                    ? "Changes here apply when no app-specific override matches."
+                    : set.path
+            }
+        )
+    }
+
+    private var selectedSet: ApplicationCommandSet? {
+        sets.first(where: { $0.id == selectedSetID }) ?? sets.first
+    }
+}
+
+struct SettingsOverrideManagerSection: View {
+    let device: CommandDevice
+    let commandSets: [ApplicationCommandSet]
+    let currentSelectedSetID: String
+    let differenceCount: (ApplicationCommandSet) -> Int
+    let onAddOverride: () -> Void
+    let onSelectOverride: (String) -> Void
+    let onResetOverride: (String) -> Void
+    let onOpenApp: (String) -> Void
+    let onReveal: (String) -> Void
+    let onRemoveOverride: (String) -> Void
+
+    var body: some View {
+        SettingsOverrideManagerCard(
+            device: device,
+            overrides: overrides,
+            currentSelectedSetID: currentSelectedSetID,
+            differenceCount: differenceCount,
+            onAddOverride: onAddOverride,
+            onSelectOverride: onSelectOverride,
+            onResetOverride: onResetOverride,
+            onOpenApp: onOpenApp,
+            onReveal: onReveal,
+            onRemoveOverride: onRemoveOverride
+        )
+    }
+
+    private var overrides: [ApplicationCommandSet] {
+        commandSets
+            .filter { !$0.path.isEmpty }
+            .sorted {
+                $0.application.localizedCaseInsensitiveCompare($1.application) == .orderedAscending
+            }
+    }
+}
+
 struct SettingsProfileSelectionCard: View {
     let device: CommandDevice
     let sets: [ApplicationCommandSet]

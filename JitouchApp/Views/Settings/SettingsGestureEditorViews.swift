@@ -1,6 +1,131 @@
 import AppKit
 import SwiftUI
 
+struct SettingsGestureEditingSection<GestureEditorContent: View>: View {
+    let device: CommandDevice
+    let selectedSet: ApplicationCommandSet?
+    let overrideCount: Int
+    let differenceCount: Int
+    let searchText: String
+    let activeGestures: [String]
+    let inactiveGestures: [String]
+    let onBackToDefault: () -> Void
+    let onResetToDefault: () -> Void
+    let onOpenApp: () -> Void
+    let onReveal: () -> Void
+    let onRemoveOverride: () -> Void
+    let gestureEditor: (String) -> GestureEditorContent
+
+    init(
+        device: CommandDevice,
+        selectedSet: ApplicationCommandSet?,
+        overrideCount: Int,
+        differenceCount: Int,
+        searchText: String,
+        activeGestures: [String],
+        inactiveGestures: [String],
+        onBackToDefault: @escaping () -> Void,
+        onResetToDefault: @escaping () -> Void,
+        onOpenApp: @escaping () -> Void,
+        onReveal: @escaping () -> Void,
+        onRemoveOverride: @escaping () -> Void,
+        @ViewBuilder gestureEditor: @escaping (String) -> GestureEditorContent
+    ) {
+        self.device = device
+        self.selectedSet = selectedSet
+        self.overrideCount = overrideCount
+        self.differenceCount = differenceCount
+        self.searchText = searchText
+        self.activeGestures = activeGestures
+        self.inactiveGestures = inactiveGestures
+        self.onBackToDefault = onBackToDefault
+        self.onResetToDefault = onResetToDefault
+        self.onOpenApp = onOpenApp
+        self.onReveal = onReveal
+        self.onRemoveOverride = onRemoveOverride
+        self.gestureEditor = gestureEditor
+    }
+
+    var body: some View {
+        JitouchSurfaceCard(
+            title: "Gesture Mappings",
+            subtitle: "Enable only the gestures you care about, then assign actions, shortcuts, URLs, or file launches.",
+            symbol: "wand.and.stars",
+            tint: .indigo
+        ) {
+            VStack(alignment: .leading, spacing: 14) {
+                if let selectedSet {
+                    SettingsProfileEditingContextView(
+                        device: device,
+                        set: selectedSet,
+                        enabledCount: selectedSet.gestures.filter(\.isEnabled).count,
+                        overrideCount: overrideCount,
+                        differenceCount: differenceCount,
+                        onBackToDefault: onBackToDefault,
+                        onResetToDefault: onResetToDefault,
+                        onOpenApp: onOpenApp,
+                        onReveal: onReveal,
+                        onRemoveOverride: onRemoveOverride
+                    )
+
+                    if isFiltering {
+                        Text("Showing \(activeGestures.count + inactiveGestures.count) matching gestures for “\(searchText)”")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if activeGestures.isEmpty && !isFiltering {
+                        Text("No enabled mappings in this profile yet. Open the list below and turn on the gestures you want.")
+                            .foregroundStyle(.secondary)
+                    } else if !activeGestures.isEmpty {
+                        Text(isFiltering ? "Matching Enabled Gestures" : "Enabled")
+                            .font(.headline)
+
+                        ForEach(activeGestures, id: \.self) { gesture in
+                            gestureEditor(gesture)
+                        }
+                    }
+
+                    if !inactiveGestures.isEmpty && !isFiltering {
+                        Divider()
+
+                        DisclosureGroup("More Gestures (\(inactiveGestures.count))") {
+                            VStack(alignment: .leading, spacing: 12) {
+                                ForEach(inactiveGestures, id: \.self) { gesture in
+                                    gestureEditor(gesture)
+                                }
+                            }
+                            .padding(.top, 10)
+                        }
+                    } else if !inactiveGestures.isEmpty {
+                        Divider()
+
+                        Text("Matching Disabled Gestures")
+                            .font(.headline)
+
+                        ForEach(inactiveGestures, id: \.self) { gesture in
+                            gestureEditor(gesture)
+                        }
+                    } else if activeGestures.isEmpty && isFiltering {
+                        ContentUnavailableView(
+                            "No Matching Gestures",
+                            systemImage: "magnifyingglass",
+                            description: Text("Try another search term or clear the filter.")
+                        )
+                    }
+                } else {
+                    Text("Pick a profile to start editing gesture bindings.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var isFiltering: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+}
+
 struct SettingsGestureEditorCard: View {
     let device: CommandDevice
     let gesture: String
