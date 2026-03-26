@@ -171,6 +171,125 @@ enum TouchFrameFactory {
         ]
     }
 
+    static func trackpadThreeFingerPinch(
+        direction: PinchDirection,
+        startTimestamp: Double = 0
+    ) -> [TouchFrame] {
+        let start = [
+            touch(id: 1, x: 0.20, y: 0.50, timestamp: startTimestamp),
+            touch(id: 2, x: 0.50, y: 0.50, timestamp: startTimestamp),
+            touch(id: 3, x: 0.80, y: 0.50, timestamp: startTimestamp),
+        ]
+
+        let moved: [TouchPoint]
+        switch direction {
+        case .outward:
+            moved = [
+                touch(id: 1, x: 0.08, y: 0.50, timestamp: startTimestamp + 0.05),
+                touch(id: 2, x: 0.50, y: 0.50, timestamp: startTimestamp + 0.05),
+                touch(id: 3, x: 0.92, y: 0.50, timestamp: startTimestamp + 0.05),
+            ]
+        case .inward:
+            moved = [
+                touch(id: 1, x: 0.32, y: 0.50, timestamp: startTimestamp + 0.05),
+                touch(id: 2, x: 0.50, y: 0.50, timestamp: startTimestamp + 0.05),
+                touch(id: 3, x: 0.68, y: 0.50, timestamp: startTimestamp + 0.05),
+            ]
+        }
+
+        return [
+            trackpadFrame(timestamp: startTimestamp, touches: start),
+            trackpadFrame(timestamp: startTimestamp + 0.05, touches: moved),
+        ]
+    }
+
+    static func trackpadTabSwitch(
+        direction: TabDirection,
+        startTimestamp: Double = 0
+    ) -> [TouchFrame] {
+        let coordinates: [[CGPoint]]
+        switch direction {
+        case .indexToPinky:
+            coordinates = [
+                [CGPoint(x: 0.10, y: 0.10)],
+                [CGPoint(x: 0.18, y: 0.18), CGPoint(x: 0.22, y: 0.22)],
+                [CGPoint(x: 0.28, y: 0.28), CGPoint(x: 0.32, y: 0.32), CGPoint(x: 0.36, y: 0.36)],
+                [CGPoint(x: 0.40, y: 0.40), CGPoint(x: 0.44, y: 0.44), CGPoint(x: 0.48, y: 0.48), CGPoint(x: 0.52, y: 0.52)],
+            ]
+        case .pinkyToIndex:
+            coordinates = [
+                [CGPoint(x: 0.70, y: 0.70)],
+                [CGPoint(x: 0.55, y: 0.55), CGPoint(x: 0.60, y: 0.60)],
+                [CGPoint(x: 0.40, y: 0.40), CGPoint(x: 0.45, y: 0.45), CGPoint(x: 0.50, y: 0.50)],
+                [CGPoint(x: 0.25, y: 0.25), CGPoint(x: 0.30, y: 0.30), CGPoint(x: 0.35, y: 0.35), CGPoint(x: 0.40, y: 0.40)],
+            ]
+        }
+
+        let activeFrames = coordinates.enumerated().map { index, points in
+            let timestamp = startTimestamp + (Double(index) * 0.05)
+            let touches = points.enumerated().map { offset, point in
+                touch(id: offset + 1, x: point.x, y: point.y, timestamp: timestamp)
+            }
+            return trackpadFrame(timestamp: timestamp, touches: touches)
+        }
+
+        return activeFrames + [
+            releaseFrame(deviceType: .trackpad, timestamp: startTimestamp + 0.20),
+        ]
+    }
+
+    static func trackpadMoveResizeSession(
+        mode: MoveResizeMode,
+        startTimestamp: Double = 0
+    ) -> [TouchFrame] {
+        let activationPoint: CGPoint = mode == .move
+            ? CGPoint(x: 0.50, y: 0.35)
+            : CGPoint(x: 0.35, y: 0.65)
+        let changedPoint: CGPoint = mode == .move
+            ? CGPoint(x: 0.52, y: 0.32)
+            : CGPoint(x: 0.33, y: 0.69)
+
+        return [
+            trackpadFrame(
+                timestamp: startTimestamp,
+                touches: [
+                    touch(id: 1, x: 0.30, y: 0.30, timestamp: startTimestamp),
+                ]
+            ),
+            trackpadFrame(
+                timestamp: startTimestamp + 0.05,
+                touches: [
+                    touch(id: 1, x: 0.30, y: 0.30, timestamp: startTimestamp + 0.05),
+                    touch(id: 2, x: 0.50, y: 0.50, timestamp: startTimestamp + 0.05),
+                ]
+            ),
+            trackpadFrame(
+                timestamp: startTimestamp + 0.10,
+                touches: [
+                    touch(id: 1, x: 0.30, y: 0.30, timestamp: startTimestamp + 0.10),
+                    touch(
+                        id: 2,
+                        x: activationPoint.x,
+                        y: activationPoint.y,
+                        timestamp: startTimestamp + 0.10
+                    ),
+                ]
+            ),
+            trackpadFrame(
+                timestamp: startTimestamp + 0.15,
+                touches: [
+                    touch(
+                        id: 2,
+                        x: changedPoint.x,
+                        y: changedPoint.y,
+                        timestamp: startTimestamp + 0.15
+                    ),
+                ]
+            ),
+            releaseFrame(deviceType: .trackpad, timestamp: startTimestamp + 0.20),
+        ]
+    }
+
     static func magicMouseThreeFingerSwipe(
         direction: Direction,
         startTimestamp: Double = 0

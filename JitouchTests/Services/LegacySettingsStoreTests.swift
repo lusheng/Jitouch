@@ -122,6 +122,52 @@ final class LegacySettingsStoreTests: XCTestCase {
         XCTAssertTrue(store.preferencesFileExists)
     }
 
+    func testSaveAndReloadRoundTripsMagicMouseAndRecognitionCommands() throws {
+        let store = makeStore(named: "command-roundtrip.plist")
+        var settings = CommandCatalog.defaultSettings
+        settings.magicMouseCommands = [
+            ApplicationCommandSet(
+                application: "Safari",
+                path: "/Applications/Safari.app",
+                gestures: [
+                    GestureCommand(
+                        gesture: "Three-Swipe-Left",
+                        command: "Open URL",
+                        openURL: "https://jitouch.com"
+                    ),
+                    GestureCommand(
+                        gesture: "Pinch Out",
+                        command: "Open File",
+                        openFilePath: "/tmp/demo.txt"
+                    ),
+                ]
+            ),
+        ]
+        settings.recognitionCommands = [
+            ApplicationCommandSet(
+                application: "All Applications",
+                gestures: [
+                    GestureCommand(
+                        gesture: "B",
+                        command: "Open URL",
+                        openURL: "https://browser.example"
+                    ),
+                    GestureCommand(
+                        gesture: "F",
+                        command: "Open File",
+                        openFilePath: "/Applications/Finder.app"
+                    ),
+                ]
+            ),
+        ]
+
+        try store.save(settings)
+        let reloaded = store.load()
+
+        XCTAssertEqual(reloaded.magicMouseCommands, settings.magicMouseCommands)
+        XCTAssertEqual(reloaded.recognitionCommands, settings.recognitionCommands)
+    }
+
     private func makeStore(named fileName: String) -> LegacySettingsStore {
         LegacySettingsStore(
             domainIdentifier: "com.jitouch.tests.\(UUID().uuidString)",
