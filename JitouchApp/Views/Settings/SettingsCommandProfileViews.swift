@@ -322,38 +322,33 @@ private struct SettingsOverrideRow: View {
         let enabledCount = set.gestures.filter(\.isEnabled).count
         let totalCount = set.gestures.count
 
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 12) {
-                SettingsApplicationIconBadge(
-                    application: set.application,
-                    path: set.path,
-                    tint: isSelected ? .blue : .teal,
-                    isSelected: isSelected
-                )
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(set.application)
-                            .font(.subheadline.weight(.semibold))
-
-                        if isSelected {
-                            SettingsCardStatusBadge(title: "Editing", tint: .blue)
-                        }
-                    }
-
-                    Text(set.path)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-
-                    Text("\(enabledCount) enabled gestures · \(totalCount) stored mappings · \(differenceCount) changed from default")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer(minLength: 12)
+        SettingsIconSummaryRow(
+            title: set.application,
+            backgroundColor: isSelected ? Color.blue.opacity(0.08) : Color(nsColor: .windowBackgroundColor),
+            borderColor: isSelected ? Color.blue.opacity(0.28) : Color.primary.opacity(0.05)
+        ) {
+            SettingsApplicationIconBadge(
+                application: set.application,
+                path: set.path,
+                tint: isSelected ? .blue : .teal,
+                isSelected: isSelected
+            )
+        } accessory: {
+            if isSelected {
+                SettingsCardStatusBadge(title: "Editing", tint: .blue)
             }
+        } summary: {
+            SettingsTitledSummaryRow(
+                title: nil,
+                summary: set.path,
+                isSummaryMonospaced: true,
+                isSummarySelectable: true
+            )
 
+            SettingsFootnoteText(
+                text: "\(enabledCount) enabled gestures · \(totalCount) stored mappings · \(differenceCount) changed from default"
+            )
+        } actions: {
             SettingsActionRow(spacing: 10) {
                 if isSelected {
                     Button("Currently Editing", action: onSelect)
@@ -376,15 +371,6 @@ private struct SettingsOverrideRow: View {
                     .buttonStyle(.bordered)
             }
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(isSelected ? Color.blue.opacity(0.08) : Color(nsColor: .windowBackgroundColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(isSelected ? Color.blue.opacity(0.28) : Color.primary.opacity(0.05), lineWidth: 1)
-        )
     }
 }
 

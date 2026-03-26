@@ -312,28 +312,14 @@ private struct OverviewChecklistRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: isComplete ? "checkmark.circle.fill" : "circle.dashed")
-                .foregroundStyle(isComplete ? .green : .orange)
-                .font(.system(size: 15, weight: .semibold))
-                .padding(.top, 2)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-
-                Text(detail)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer(minLength: 12)
-
-            if let actionTitle, let action {
-                Button(actionTitle, action: action)
-                    .buttonStyle(.bordered)
-            }
-        }
+        SettingsStatusListRow(
+            title: title,
+            detail: detail,
+            systemImage: isComplete ? "checkmark.circle.fill" : "circle.dashed",
+            tint: isComplete ? .green : .orange,
+            actionTitle: actionTitle,
+            action: action
+        )
     }
 }
 
@@ -342,12 +328,7 @@ private struct OverviewCoverageRow: View {
     let count: Int
 
     var body: some View {
-        HStack {
-            Text(title)
-            Spacer()
-            Text("\(count)")
-                .foregroundStyle(.secondary)
-        }
+        SettingsLabelValueRow(label: title, value: "\(count)")
     }
 }
 
@@ -356,18 +337,18 @@ private struct OverviewCommandSampleView: View {
     let sets: [ApplicationCommandSet]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(device.title)
-                .font(.subheadline.weight(.semibold))
+        SettingsTitledSummaryRow(
+            title: device.title,
+            summary: previewSummary
+        )
+    }
 
-            if let firstSet = sets.first {
-                let preview = firstSet.gestures.prefix(3).map { "\($0.gesture) -> \($0.command)" }.joined(separator: " • ")
-                Text(preview.isEmpty ? "No commands imported." : preview)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("No commands imported.")
-                    .foregroundStyle(.secondary)
-            }
+    private var previewSummary: String {
+        if let firstSet = sets.first {
+            let preview = firstSet.gestures.prefix(3).map { "\($0.gesture) -> \($0.command)" }.joined(separator: " • ")
+            return preview.isEmpty ? "No commands imported." : preview
         }
+
+        return "No commands imported."
     }
 }

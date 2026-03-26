@@ -156,12 +156,10 @@ private struct DiagnosticsDeviceSection: View {
                 SettingsSecondaryPlaceholderText(text: "No devices detected.")
             } else {
                 ForEach(devices) { device in
-                    HStack {
-                        Text(device.displayName)
-                        Spacer()
-                        Text("family \(device.familyID)")
-                            .foregroundStyle(.secondary)
-                    }
+                    SettingsLabelValueRow(
+                        label: device.displayName,
+                        value: "family \(device.familyID)"
+                    )
                 }
             }
         }

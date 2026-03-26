@@ -188,6 +188,191 @@ struct SettingsActionMessageRow<Actions: View, Message: View>: View {
     }
 }
 
+struct SettingsStatusListRow: View {
+    let title: String
+    let detail: String
+    let systemImage: String
+    let tint: Color
+    let actionTitle: String?
+    let action: (() -> Void)?
+
+    init(
+        title: String,
+        detail: String,
+        systemImage: String,
+        tint: Color,
+        actionTitle: String? = nil,
+        action: (() -> Void)? = nil
+    ) {
+        self.title = title
+        self.detail = detail
+        self.systemImage = systemImage
+        self.tint = tint
+        self.actionTitle = actionTitle
+        self.action = action
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: systemImage)
+                .foregroundStyle(tint)
+                .font(.system(size: 15, weight: .semibold))
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 12)
+
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .buttonStyle(.bordered)
+            }
+        }
+    }
+}
+
+struct SettingsLabelValueRow: View {
+    let label: String
+    let value: String
+    let valueTint: Color
+
+    init(
+        label: String,
+        value: String,
+        valueTint: Color = .secondary
+    ) {
+        self.label = label
+        self.value = value
+        self.valueTint = valueTint
+    }
+
+    var body: some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text(value)
+                .foregroundStyle(valueTint)
+        }
+    }
+}
+
+struct SettingsTitledSummaryRow: View {
+    let title: String?
+    let summary: String
+    let summaryTint: Color
+    let isSummaryMonospaced: Bool
+    let isSummarySelectable: Bool
+
+    init(
+        title: String? = nil,
+        summary: String,
+        summaryTint: Color = .secondary,
+        isSummaryMonospaced: Bool = false,
+        isSummarySelectable: Bool = false
+    ) {
+        self.title = title
+        self.summary = summary
+        self.summaryTint = summaryTint
+        self.isSummaryMonospaced = isSummaryMonospaced
+        self.isSummarySelectable = isSummarySelectable
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let title, !title.isEmpty {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+            }
+
+            if isSummarySelectable {
+                summaryText
+                    .foregroundStyle(summaryTint)
+                    .textSelection(.enabled)
+            } else {
+                summaryText
+                    .foregroundStyle(summaryTint)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var summaryText: some View {
+        if isSummaryMonospaced {
+            Text(summary)
+                .font(.caption.monospaced())
+        } else {
+            Text(summary)
+        }
+    }
+}
+
+struct SettingsIconSummaryRow<Icon: View, Accessory: View, Summary: View, Actions: View>: View {
+    let title: String
+    let backgroundColor: Color
+    let borderColor: Color
+    let icon: Icon
+    let accessory: Accessory
+    let summary: Summary
+    let actions: Actions
+
+    init(
+        title: String,
+        backgroundColor: Color,
+        borderColor: Color,
+        @ViewBuilder icon: () -> Icon,
+        @ViewBuilder accessory: () -> Accessory,
+        @ViewBuilder summary: () -> Summary,
+        @ViewBuilder actions: () -> Actions
+    ) {
+        self.title = title
+        self.backgroundColor = backgroundColor
+        self.borderColor = borderColor
+        self.icon = icon()
+        self.accessory = accessory()
+        self.summary = summary()
+        self.actions = actions()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                icon
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+
+                        accessory
+                    }
+
+                    summary
+                }
+
+                Spacer(minLength: 12)
+            }
+
+            actions
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(backgroundColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(borderColor, lineWidth: 1)
+        )
+    }
+}
+
 struct SettingsBulletNoteRow: View {
     let text: String
 
