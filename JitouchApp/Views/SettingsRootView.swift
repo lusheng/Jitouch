@@ -248,11 +248,15 @@ struct SettingsRootView: View {
             deviceConfigurationPane(for: .magicMouse)
         case .recognition:
             RecognitionSettingsTab(
+                trackpadCharacterRecognitionEnabled: trackpadCharacterRecognitionEnabledBinding,
+                oneFingerDrawingEnabled: oneFingerDrawingEnabledBinding,
+                twoFingerDrawingEnabled: twoFingerDrawingEnabledBinding,
+                magicMouseCharacterRecognitionEnabled: magicMouseCharacterRecognitionEnabledBinding,
+                characterRecognitionDistance: characterRecognitionDistanceBinding,
+                characterRecognitionMouseButton: characterRecognitionMouseButtonBinding,
+                hasLiveDiagnosticsSnapshot: appModel.characterRecognitionDiagnostics.liveSnapshot != nil,
+                characterRecognitionDiagnosticsEnabled: characterRecognitionDiagnosticsEnabledBinding
             ) {
-                recognitionSummaryCard
-            } characterRecognitionSettings: {
-                characterRecognitionSettings
-            } profileSelection: {
                 profileSelectionCard(for: .recognition)
             } gestureSearch: {
                 gestureSearchCard(for: .recognition)
@@ -327,13 +331,18 @@ struct SettingsRootView: View {
 
     private func deviceConfigurationPane(for device: CommandDevice) -> some View {
         let pane: JitouchSettingsPane = device == .trackpad ? .trackpad : .magicMouse
+        let mappingCount = device == .trackpad ? appModel.trackpadCommandCount : appModel.magicMouseCommandCount
+        let connectedDeviceCount = device == .trackpad ? deviceManager.trackpadDevices.count : deviceManager.magicMouseDevices.count
+        let isProfilesEnabled = device == .trackpad ? trackpadEnabledBinding : magicMouseEnabledBinding
 
         return DeviceSettingsTab(
+            device: device,
             title: pane.title,
             subtitle: pane.subtitle,
+            mappingCount: mappingCount,
+            connectedDeviceCount: connectedDeviceCount,
+            isProfilesEnabled: isProfilesEnabled
         ) {
-            deviceSummaryCard(for: device)
-        } profileSelection: {
             profileSelectionCard(for: device)
         } overrideManager: {
             overrideManagerCard(for: device)
@@ -341,44 +350,6 @@ struct SettingsRootView: View {
             gestureSearchCard(for: device)
         } gestureEditor: {
             gestureEditorSection(for: device)
-        }
-    }
-
-    private var characterRecognitionSettings: some View {
-        JitouchSurfaceCard(
-            title: "Character Recognition",
-            subtitle: "Configure drawing-based input on trackpad and Magic Mouse, plus the shared thresholds that shape recognition stability.",
-            symbol: "character.cursor.ibeam",
-            tint: .purple
-        ) {
-            VStack(alignment: .leading, spacing: 14) {
-                Toggle("Enable Trackpad Character Recognition", isOn: trackpadCharacterRecognitionEnabledBinding)
-                Toggle("Enable One-Finger Drawing", isOn: oneFingerDrawingEnabledBinding)
-                    .disabled(!trackpadCharacterRecognitionEnabledBinding.wrappedValue)
-                Toggle("Enable Two-Finger Drawing", isOn: twoFingerDrawingEnabledBinding)
-                    .disabled(!trackpadCharacterRecognitionEnabledBinding.wrappedValue)
-                Toggle("Enable Magic Mouse Character Recognition", isOn: magicMouseCharacterRecognitionEnabledBinding)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Index / Ring Distance")
-                        Spacer()
-                        Text(characterRecognitionDistanceBinding.wrappedValue, format: .number.precision(.fractionLength(2)))
-                            .foregroundStyle(.secondary)
-                    }
-                    Slider(value: characterRecognitionDistanceBinding, in: 0.18 ... 0.50)
-                }
-
-                Picker("Mouse Recognition Button", selection: characterRecognitionMouseButtonBinding) {
-                    Text("Middle Click").tag(0)
-                    Text("Right Click").tag(1)
-                }
-                .pickerStyle(.segmented)
-                .disabled(!magicMouseCharacterRecognitionEnabledBinding.wrappedValue)
-
-                Text("Trackpad one-finger and two-finger drawing, plus Magic Mouse drag-to-character, are now wired up in Swift. Character overlay timing is much closer to the legacy build, but threshold calibration still needs real-device tuning.")
-                    .foregroundStyle(.secondary)
-            }
         }
     }
 
@@ -393,79 +364,6 @@ struct SettingsRootView: View {
             diagnostics: appModel.characterRecognitionDiagnostics,
             onClearDiagnostics: appModel.clearCharacterRecognitionDiagnostics
         )
-    }
-
-    private var recognitionSummaryCard: some View {
-        JitouchSurfaceCard(
-            title: "Recognition Modes",
-            subtitle: "Trackpad and Magic Mouse drawing now share the same Swift recognition core, with adjustable thresholds and profile-based command outputs.",
-            symbol: "signature",
-            tint: .purple
-        ) {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
-                JitouchMetricTile(
-                    title: "Trackpad Recognition",
-                    value: trackpadCharacterRecognitionEnabledBinding.wrappedValue ? "Enabled" : "Disabled",
-                    detail: oneFingerDrawingEnabledBinding.wrappedValue || twoFingerDrawingEnabledBinding.wrappedValue
-                        ? "Drawing input is available on trackpad."
-                        : "No trackpad drawing modes are active.",
-                    symbol: "rectangle.and.pencil.and.ellipsis",
-                    tint: trackpadCharacterRecognitionEnabledBinding.wrappedValue ? .green : .secondary
-                )
-                JitouchMetricTile(
-                    title: "Magic Mouse Recognition",
-                    value: magicMouseCharacterRecognitionEnabledBinding.wrappedValue ? "Enabled" : "Disabled",
-                    detail: characterRecognitionMouseButtonBinding.wrappedValue == 0 ? "Triggered from middle click." : "Triggered from right click.",
-                    symbol: "mouse",
-                    tint: magicMouseCharacterRecognitionEnabledBinding.wrappedValue ? .blue : .secondary
-                )
-                JitouchMetricTile(
-                    title: "Diagnostics",
-                    value: characterRecognitionDiagnosticsEnabledBinding.wrappedValue ? "Live" : "Off",
-                    detail: appModel.characterRecognitionDiagnostics.liveSnapshot == nil ? "No live snapshot yet." : "Receiving recognizer snapshots.",
-                    symbol: "waveform.path.ecg",
-                    tint: characterRecognitionDiagnosticsEnabledBinding.wrappedValue ? .pink : .secondary
-                )
-            }
-        }
-    }
-
-    private func deviceSummaryCard(for device: CommandDevice) -> some View {
-        let title = device == .trackpad ? "Trackpad Runtime" : "Magic Mouse Runtime"
-        let subtitle = device == .trackpad
-            ? "Trackpad tap, swipe, fix-finger, pinch, move/resize, tab switch, and drawing recognition now live in the standalone app."
-            : "Magic Mouse taps, swipes, slides, thumb gestures, V-shape, pinch, and drag recognition now live in the standalone app."
-        let symbol = device == .trackpad ? "rectangle.and.hand.point.up.left" : "mouse"
-        let tint: Color = device == .trackpad ? .blue : .mint
-        let isEnabledBinding = device == .trackpad ? trackpadEnabledBinding : magicMouseEnabledBinding
-        let mappingCount = device == .trackpad ? appModel.trackpadCommandCount : appModel.magicMouseCommandCount
-        let deviceCount = device == .trackpad ? deviceManager.trackpadDevices.count : deviceManager.magicMouseDevices.count
-
-        return JitouchSurfaceCard(
-            title: title,
-            subtitle: subtitle,
-            symbol: symbol,
-            tint: tint
-        ) {
-            Toggle("Enable \(device.title) Profiles", isOn: isEnabledBinding)
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
-                JitouchMetricTile(
-                    title: "Mappings",
-                    value: "\(mappingCount)",
-                    detail: "Loaded from the legacy command store and editable in-place.",
-                    symbol: "square.grid.2x2",
-                    tint: tint
-                )
-                JitouchMetricTile(
-                    title: "Connected Devices",
-                    value: "\(deviceCount)",
-                    detail: deviceCount == 0 ? "No matching device detected right now." : "Hardware is visible to the runtime.",
-                    symbol: "dot.radiowaves.left.and.right",
-                    tint: deviceCount == 0 ? .orange : .green
-                )
-            }
-        }
     }
 
     private func profileSelectionCard(for device: CommandDevice) -> some View {
