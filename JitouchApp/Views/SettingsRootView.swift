@@ -983,105 +983,54 @@ struct SettingsRootView: View {
 
     private func profileSelectionCard(for device: CommandDevice) -> some View {
         let sets = appModel.commandSets(for: device)
-        let selectedSet = selectedCommandSet(for: device)
-
-        return JitouchSurfaceCard(
-            title: device == .recognition ? "Recognition Profile" : "Profiles",
-            subtitle: device == .recognition
-                ? "Character mappings usually stay global, but they still use the same profile storage model."
-                : "Choose which profile you are actively editing. App-specific override management lives in its own section below.",
-            symbol: device == .recognition ? "text.badge.star" : "square.on.square",
-            tint: device == .recognition ? .purple : .blue,
-            accessory: {
-                JitouchStatusBadge(title: "\(sets.count) profile\(sets.count == 1 ? "" : "s")", tint: .secondary)
+        return SettingsProfileSelectionCard(
+            device: device,
+            sets: sets,
+            selectedSet: selectedCommandSet(for: device),
+            selectedSetID: selectedSetIDBinding(for: device),
+            profileTitle: { set in
+                set.path.isEmpty ? set.application : "\(set.application) Override"
+            },
+            profileDescription: { set in
+                set.path.isEmpty
+                    ? "Changes here apply when no app-specific override matches."
+                    : set.path
             }
-        ) {
-            VStack(alignment: .leading, spacing: 14) {
-                if sets.isEmpty {
-                    Text("No profiles available yet.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    Picker("Editing Profile", selection: selectedSetIDBinding(for: device)) {
-                        ForEach(sets) { set in
-                            Text(profileTitle(for: set)).tag(set.id)
-                        }
-                    }
-                    .pickerStyle(.menu)
-
-                    if let selectedSet {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(selectedSet.path.isEmpty ? "Default profile" : "App-specific override")
-                                .font(.subheadline.weight(.semibold))
-
-                            Text(profileDescription(for: selectedSet))
-                                .foregroundStyle(.secondary)
-                                .textSelection(.enabled)
-                        }
-                    }
-
-                    if device == .recognition {
-                        Text("Character mappings reuse the same profile model, but usually stay global to keep recognition predictable.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("Use App Overrides below to add app-specific profiles, switch to them, reveal the target app, or remove them.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-        }
+        )
     }
 
     private func overrideManagerCard(for device: CommandDevice) -> some View {
         let overrides = applicationOverrides(for: device)
         let sets = appModel.commandSets(for: device)
 
-        return JitouchSurfaceCard(
-            title: "App Overrides",
-            subtitle: "App-specific profiles override the default mappings whenever the matching application is frontmost.",
-            symbol: "app.badge",
-            tint: .teal,
-            accessory: {
-                JitouchStatusBadge(title: "\(overrides.count) override\(overrides.count == 1 ? "" : "s")", tint: .secondary)
-            }
-        ) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 12) {
-                    Button("Add App Override…") {
-                        let previousIDs = Set(sets.map(\.id))
-                        appModel.addApplicationOverrideFromOpenPanel(for: device)
-                        if let newID = appModel.commandSets(for: device)
-                            .map(\.id)
-                            .first(where: { !previousIDs.contains($0) }) {
-                            setSelectedSetID(newID, for: device)
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-
-                    if let selectedSet = selectedCommandSet(for: device), !selectedSet.path.isEmpty {
-                        Button("Edit Selected Override") {
-                            setSelectedSetID(selectedSet.id, for: device)
-                        }
-                        .buttonStyle(.bordered)
-                    }
+        return SettingsOverrideManagerCard(
+            device: device,
+            overrides: overrides,
+            currentSelectedSetID: currentSelectedSetID(for: device),
+            differenceCount: { set in
+                overrideDifferenceCount(for: set, device: device)
+            },
+            onAddOverride: {
+                let previousIDs = Set(sets.map(\.id))
+                appModel.addApplicationOverrideFromOpenPanel(for: device)
+                if let newID = appModel.commandSets(for: device)
+                    .map(\.id)
+                    .first(where: { !previousIDs.contains($0) }) {
+                    setSelectedSetID(newID, for: device)
                 }
-
-                if overrides.isEmpty {
-                    ContentUnavailableView(
-                        "No App Overrides Yet",
-                        systemImage: "square.on.square.dashed",
-                        description: Text("Create one to give a specific app its own gesture behavior without changing your default profile.")
-                    )
-                } else {
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach(overrides) { set in
-                            overrideRow(set, device: device)
-                        }
-                    }
-                }
+            },
+            onSelectOverride: { setID in
+                setSelectedSetID(setID, for: device)
+            },
+            onResetOverride: { setID in
+                appModel.resetApplicationOverrideToDefault(for: device, setID: setID)
+            },
+            onOpenApp: openOverrideApplication,
+            onReveal: revealFilePath,
+            onRemoveOverride: { setID in
+                appModel.removeApplicationOverride(for: device, setID: setID)
             }
-        }
+        )
     }
 
     private func gestureEditorSection(for device: CommandDevice) -> some View {
@@ -1095,7 +1044,28 @@ struct SettingsRootView: View {
         ) {
             VStack(alignment: .leading, spacing: 14) {
                 if let selectedSet {
-                    profileEditingContext(for: device, set: selectedSet)
+                    SettingsProfileEditingContextView(
+                        device: device,
+                        set: selectedSet,
+                        enabledCount: selectedSet.gestures.filter(\.isEnabled).count,
+                        overrideCount: applicationOverrides(for: device).count,
+                        differenceCount: overrideDifferenceCount(for: selectedSet, device: device),
+                        onBackToDefault: {
+                            setSelectedSetID("All Applications", for: device)
+                        },
+                        onResetToDefault: {
+                            appModel.resetApplicationOverrideToDefault(for: device, setID: selectedSet.id)
+                        },
+                        onOpenApp: {
+                            openOverrideApplication(selectedSet.path)
+                        },
+                        onReveal: {
+                            revealFilePath(selectedSet.path)
+                        },
+                        onRemoveOverride: {
+                            appModel.removeApplicationOverride(for: device, setID: selectedSet.id)
+                        }
+                    )
 
                     let searchText = currentSearchText(for: device)
                     let activeGestures = activeGestureNames(for: device, setID: selectedSet.id)
@@ -1338,28 +1308,10 @@ struct SettingsRootView: View {
     }
 
     private func gestureSearchCard(for device: CommandDevice) -> some View {
-        JitouchSurfaceCard(
-            title: "Find a Gesture",
-            subtitle: "Filter by gesture name or current command so you can jump straight to the binding you want.",
-            symbol: "magnifyingglass",
-            tint: .cyan
-        ) {
-            VStack(alignment: .leading, spacing: 10) {
-                TextField(
-                    searchPlaceholder(for: device),
-                    text: searchTextBinding(for: device)
-                )
-                .textFieldStyle(.roundedBorder)
-
-                Text("Search matches gesture names and currently assigned commands, so you can jump straight to one mapping instead of scrolling through the whole profile.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private func profileTitle(for set: ApplicationCommandSet) -> String {
-        set.path.isEmpty ? set.application : "\(set.application) Override"
+        SettingsGestureSearchCard(
+            device: device,
+            searchText: searchTextBinding(for: device)
+        )
     }
 
     private func applicationOverrides(for device: CommandDevice) -> [ApplicationCommandSet] {
@@ -1388,237 +1340,6 @@ struct SettingsRootView: View {
 
     private func defaultCommandSet(for device: CommandDevice) -> ApplicationCommandSet? {
         appModel.commandSets(for: device).first(where: { $0.path.isEmpty })
-    }
-
-    private func profileEditingContext(
-        for device: CommandDevice,
-        set: ApplicationCommandSet
-    ) -> some View {
-        let enabledCount = set.gestures.filter(\.isEnabled).count
-        let overrides = applicationOverrides(for: device)
-        let differenceCount = overrideDifferenceCount(for: set, device: device)
-        let tint = set.path.isEmpty ? Color.blue : Color.teal
-
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                applicationIconBadge(
-                    application: set.application,
-                    path: set.path,
-                    tint: tint,
-                    isSelected: true
-                )
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(set.path.isEmpty ? "Editing All Applications" : "Editing \(set.application) Override")
-                        .font(.subheadline.weight(.semibold))
-
-                    Text(
-                        set.path.isEmpty
-                            ? "These mappings apply whenever no app-specific override matches the frontmost app."
-                            : "These mappings are only used when \(set.application) is frontmost."
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                    if !set.path.isEmpty {
-                        Text(set.path)
-                            .font(.caption.monospaced())
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                    }
-                }
-
-                Spacer(minLength: 12)
-
-                JitouchStatusBadge(
-                    title: "\(enabledCount) enabled",
-                    tint: tint
-                )
-            }
-
-            if !set.path.isEmpty {
-                Text(
-                    differenceCount == 0
-                        ? "This override currently matches the All Applications profile."
-                        : "\(differenceCount) gesture\(differenceCount == 1 ? "" : "s") currently differ from All Applications."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-
-            HStack(spacing: 10) {
-                if set.path.isEmpty {
-                    Text(
-                        overrides.isEmpty
-                            ? "No app-specific overrides are configured for this device yet."
-                            : "\(overrides.count) app override\(overrides.count == 1 ? "" : "s") currently branch from this default profile."
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                } else {
-                    Button("Back to Default") {
-                        setSelectedSetID("All Applications", for: device)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Reset to Default") {
-                        appModel.resetApplicationOverrideToDefault(for: device, setID: set.id)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Open App") {
-                        openOverrideApplication(set.path)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Reveal") {
-                        revealFilePath(set.path)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Remove Override", role: .destructive) {
-                        appModel.removeApplicationOverride(for: device, setID: set.id)
-                    }
-                    .buttonStyle(.bordered)
-                }
-            }
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(tint.opacity(0.08))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(tint.opacity(0.20), lineWidth: 1)
-        )
-    }
-
-    private func overrideRow(_ set: ApplicationCommandSet, device: CommandDevice) -> some View {
-        let isSelected = currentSelectedSetID(for: device) == set.id
-        let enabledCount = set.gestures.filter(\.isEnabled).count
-        let totalCount = set.gestures.count
-        let differenceCount = overrideDifferenceCount(for: set, device: device)
-
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 12) {
-                applicationIconBadge(
-                    application: set.application,
-                    path: set.path,
-                    tint: isSelected ? .blue : .teal,
-                    isSelected: isSelected
-                )
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(set.application)
-                            .font(.subheadline.weight(.semibold))
-
-                        if isSelected {
-                            JitouchStatusBadge(title: "Editing", tint: .blue)
-                        }
-                    }
-
-                    Text(set.path)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-
-                    Text("\(enabledCount) enabled gestures · \(totalCount) stored mappings · \(differenceCount) changed from default")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer(minLength: 12)
-            }
-
-            HStack(spacing: 10) {
-                if isSelected {
-                    Button("Currently Editing") {
-                        setSelectedSetID(set.id, for: device)
-                    }
-                    .buttonStyle(.borderedProminent)
-                } else {
-                    Button("Edit Override") {
-                        setSelectedSetID(set.id, for: device)
-                    }
-                    .buttonStyle(.bordered)
-                }
-
-                Button("Open App") {
-                    openOverrideApplication(set.path)
-                }
-                .buttonStyle(.bordered)
-
-                Button("Reset") {
-                    appModel.resetApplicationOverrideToDefault(for: device, setID: set.id)
-                }
-                .buttonStyle(.bordered)
-
-                Button("Reveal") {
-                    revealFilePath(set.path)
-                }
-                .buttonStyle(.bordered)
-
-                Button("Remove", role: .destructive) {
-                    appModel.removeApplicationOverride(for: device, setID: set.id)
-                }
-                .buttonStyle(.bordered)
-            }
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(isSelected ? Color.blue.opacity(0.08) : Color(nsColor: .windowBackgroundColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(isSelected ? Color.blue.opacity(0.28) : Color.primary.opacity(0.05), lineWidth: 1)
-        )
-    }
-
-    @ViewBuilder
-    private func applicationIconBadge(
-        application: String,
-        path: String,
-        tint: Color,
-        isSelected: Bool
-    ) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(tint.opacity(isSelected ? 0.16 : 0.12))
-
-            if let icon = applicationIcon(for: path) {
-                Image(nsImage: icon)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .padding(6)
-            } else {
-                Image(systemName: path.isEmpty ? "square.on.square" : "app")
-                    .foregroundStyle(tint)
-                    .font(.system(size: 14, weight: .semibold))
-            }
-        }
-        .frame(width: 34, height: 34)
-        .accessibilityLabel(Text(application))
-    }
-
-    private func applicationIcon(for path: String) -> NSImage? {
-        guard !path.isEmpty else { return nil }
-
-        let standardizedPath = URL(fileURLWithPath: path).standardizedFileURL.path
-        guard FileManager.default.fileExists(atPath: standardizedPath) else { return nil }
-
-        let icon = NSWorkspace.shared.icon(forFile: standardizedPath)
-        icon.size = NSSize(width: 32, height: 32)
-        return icon
-    }
-
-    private func profileDescription(for set: ApplicationCommandSet) -> String {
-        if set.path.isEmpty {
-            return "Changes here apply when no app-specific override matches."
-        }
-        return set.path
     }
 
     private func selectedCommandSet(for device: CommandDevice) -> ApplicationCommandSet? {
@@ -1717,17 +1438,6 @@ struct SettingsRootView: View {
             magicMouseGestureSearchText = value
         case .recognition:
             recognitionGestureSearchText = value
-        }
-    }
-
-    private func searchPlaceholder(for device: CommandDevice) -> String {
-        switch device {
-        case .trackpad:
-            "Search trackpad gestures or commands"
-        case .magicMouse:
-            "Search Magic Mouse gestures or commands"
-        case .recognition:
-            "Search characters or recognition commands"
         }
     }
 
